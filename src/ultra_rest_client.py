@@ -1,191 +1,295 @@
-__author__ = 'jbodner'
-
-
-# Zones
-# create a primary zone
-def create_primary_zone(zone_name):
-    pass
-
-
-# list zones for account
-def get_zones_of_account(account_name):
-    return get("/v1/accounts/" + account_name + "/zones")
-
-
-# get zone metadata
-def get_zone_metadata(zone_name):
-    return get("/v1/zones/" + zone_name)
-
-
-# delete a zone
-def delete_zone(zone_name):
-    pass
-
-
-# RRSets
-# list rrsets for a zone
-def get_rrsets(zone_name):
-    return get("/v1/zones/" + zone_name + "/rrsets")
-
-
-# list rrsets by type for a zone
-def get_rrsets_by_type(zone_name, rtype):
-    return get("/v1/zones/" + zone_name + "/rrsets/" + rtype)
-
-
-# create an rrset
-def create_rrset(zone_name, rtype, owner_name, ttl, rdata):
-    rrset = {"ttl":ttl, "rdata":rdata}
-    return post("/v1/zones/"+zone_name+"/rrsets/"+rtype+"/"+owner_name, json.dumps(rrset))
-
-
-# edit an rrset(PUT)
-def edit_rrset(zone_name, rtype, owner_name, ttl, rdata):
-    rrset = {"ttl": ttl, "rdata": rdata}
-    return put("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name, json.dumps(rrset))
-
-
-# delete an rrset
-def delete_rrset(zone_name, rtype, owner_name):
-    return delete("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name)
-
-
-# Accounts
-# get account details for user
-def get_account_details():
-    return get("/v1/accounts")
-
-
-# Version
-# get version
-def version():
-    return get("/v1/version")
-
-
-# Status
-# get status
-def status():
-    return get("/v1/status")
-
-
-# store the URL and the access/refresh tokens as state
-import httplib
-import urllib
+# Copyright 2000 - 2013 NeuStar, Inc.All rights reserved.
+# NeuStar, the Neustar logo and related names and logos are registered
+# trademarks, service marks or tradenames of NeuStar, Inc. All other
+# product names, company names, marks, logos and symbols may be trademarks
+# of their respective owners.
+__author__ = 'Jon Bodner'
+import connection
 import json
-
-url = "restapi.ultradns.com"
-access_token = ""
-refresh_token = ""
-use_http = False
+import urllib
 
 
-class AuthError(Exception):
-    def __init__(self, message):
-        self.message = message
+#sort The sort column used to order the list string
+#reverse Whether the list is ascending(false) or descending(true)
+class SortInfo:
+    def __init__(self, sort=None, reverse=False):
+        self.sort=sort
+        self.reverse=reverse
 
-    def __str__(self):
-        return repr(self.message)
+    def sort(self):
+        return self.sort
 
+    def reverse(self):
+        return self.reverse
 
-def get_connection():
-    global use_http
-    if use_http:
-        return httplib.HTTPConnection(url)
-    else:
-        return httplib.HTTPSConnection(url)
-
-
-def fix_param_value(param_value):
-    return urllib.quote(param_value.encode("utf-8"))
-
-# Authentication
-# We need the ability to take in a username and password and get
-# an auth token and a refresh token. If any request fails due
-# to an invalid auth token, refresh must be automatically invoked, the
-# new auth token and refresh token stored, and the request tried again
-# with the new auth token.
-def auth(username, password, in_url=None):
-    global url
-    global access_token
-    global refresh_token
-    if in_url is not None:
-        url = in_url
-    h1 = get_connection()
-    h1.request("GET",
-               "/v1/authorization?username=" + fix_param_value(username) + "&password=" + fix_param_value(password))
-    r1 = h1.getresponse()
-    if r1.status == 200:
-        json_body = json.loads(r1.read())
-        access_token = json_body[u'accessToken']
-        refresh_token = json_body[u'refreshToken']
-    else:
-        raise AuthError(json.loads(r1.read()))
+    def to_dict(self):
+        out = {}
+        if self.sort is not None:
+            out["sort"]=self.sort
+        if self.reverse is not False:
+            out["reverse"]=self.reverse
+        return out
 
 
-def refresh():
-    global access_token
-    global refresh_token
-    h1 = get_connection()
-    h1.request("GET", "/v1/authorization/refresh")
-    r1 = h1.getresponse()
-    if r1.status == 200:
-        json_body = json.loads(r1.read())
-        access_token = json_body[u'accessToken']
-        refresh_token = json_body[u'refreshToken']
+#offset The position in the list for the first returned element(0 based)    int
+#limit The maximum number of rows requested int
+class PageInfo:
+    def __init__(self, offset=0, limit=None):
+        self.offset=offset
+        self.limit=limit
+
+    def offset(self):
+        return self.offset
+
+    def limit(self):
+        return self.limit
+
+    def to_dict(self):
+        out = {}
+        if self.limit is not None:
+            out["limit"] = self.limit
+        if self.offset != 0:
+            out["offset"] = self.offset
+        return out
 
 
-def build_headers():
-    return {"Content-type": "application/json", "Accept": "application/json", "Authorization": "Bearer " + access_token}
+class RestApiClient:
+    def __init__(self, username, password, use_http=False, host="restapi.ultradns.com"):
+        """Initialize a Rest API Client.
+
+        Arguments:
+        username -- The username of the user
+        password -- The password of the user
+
+        Keyword Arguments:
+        use_http -- For internal testing purposes only, lets developers use http instead of https.
+        host -- Allows you to point to a server other than the production server.
+
+        """
+        self.rest_api_connection = connection.RestApiConnection(use_http, host)
+        self.rest_api_connection.auth(username, password)
+
+    # Zones
+    # create a primary zone
+    def create_primary_zone(self, account_name, zone_name):
+        """Creates a new primary zone.
+
+        Arguments:
+        account_name -- The name of the account that will contain this zone.
+        zone_name -- The name of the zone.  It must be unique.
+
+        """
+        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
+        primary_zone_info = {"forceImport": True, "createType": "NEW"}
+        zone_data = {"zoneProperties": zone_properties, "primaryZoneInfo": primary_zone_info}
+        return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
+
+    # list zones for account
+    def get_zones_of_account(self, account_name, q=None, sort_info=None, page_info=None):
+        """Returns a list of zones for the specified account.
+
+        Arguments:
+        account_name -- The name of the account.
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             name - substring match of the zone name
+             zone_type - one of:
+                PRIMARY
+                SECONDARY
+                ALIAS
+        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
+             NAME
+             ACCOUNT_NAME
+             RECORD_COUNT
+             ZONE_TYPE
+        page_info -- The pagination parameters in a PageInfo class.
+
+        """
+        uri = "/v1/accounts/" + account_name + "/zones"
+        uri = build_params(uri, q, sort_info, page_info)
+        return self.rest_api_connection.get(uri)
+
+    # get zone metadata
+    def get_zone_metadata(self, zone_name):
+        """Returns the metadata for the specified zone.
+
+        Arguments:
+        zone_name -- The name of the zone being returned.
+
+        """
+        return self.rest_api_connection.get("/v1/zones/" + zone_name)
+
+    # delete a zone
+    def delete_zone(self, zone_name):
+        """Deletes the specified zone.
+
+        Arguments:
+        zone_name -- The name of the zone being deleted.
+
+        """
+        return self.rest_api_connection.delete("/v1/zones/"+zone_name)
+
+    # RRSets
+    # list rrsets for a zone
+    # q	The query used to construct the list. Query operators are ttl, owner, and value
+    def get_rrsets(self, zone_name, q=None, sort_info=None, page_info=None):
+        """Returns the list of RRSets in the specified zone.
+
+        Arguments:
+        zone_name -- The name of the zone.
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             ttl - must match the TTL for the rrset
+             owner - substring match of the owner name
+             value - substring match of the first BIND field value
+        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
+             OWNER
+             TTL
+             TYPE
+        page_info -- The pagination parameters in a PageInfo class.
+
+        """
+        uri = "/v1/zones/" + zone_name + "/rrsets"
+        uri = build_params(uri, q, sort_info, page_info)
+        return self.rest_api_connection.get(uri)
+
+    # list rrsets by type for a zone
+    # q	The query used to construct the list. Query operators are ttl, owner, and value
+    def get_rrsets_by_type(self, zone_name, rtype, q=None, sort_info=None, page_info=None):
+        """Returns the list of RRSets in the specified zone of the specified type.
+
+        Arguments:
+        zone_name -- The name of the zone.
+        rtype -- The type of the RRSets.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             ttl - must match the TTL for the rrset
+             owner - substring match of the owner name
+             value - substring match of the first BIND field value
+        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
+             OWNER
+             TTL
+             TYPE
+        page_info -- The pagination parameters in a PageInfo class.
+
+        """
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype
+        uri = build_params(uri, q, sort_info, page_info)
+        return self.rest_api_connection.get(uri)
+
+    # create an rrset
+    def create_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
+        """Creates a new RRSet in the specified zone.
+
+        Arguments:
+        zone_name -- The zone that will contain the new RRSet.  The trailing dot is optional.
+        rtype -- The type of the RRSet.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        ttl -- The TTL value for the RRSet.
+        rdata -- The BIND data for the RRSet as a string.
+                 If there is a single resource record in the RRSet, you can pass in the single string.
+                 If there are multiple resource records  in this RRSet, pass in a list of strings.
+
+        """
+        if type(rdata) is not list:
+            rdata = [rdata]
+        rrset = {"ttl": ttl, "rdata": rdata}
+        return self.rest_api_connection.post("/v1/zones/"+zone_name+"/rrsets/"+rtype+"/"+owner_name, json.dumps(rrset))
+
+    # edit an rrset(PUT)
+    def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
+        """Updates an existing RRSet in the specified zone.
+
+        Arguments:
+        zone_name -- The zone that contains the RRSet.  The trailing dot is optional.
+        rtype -- The type of the RRSet.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        ttl -- The updated TTL value for the RRSet.
+        rdata -- The updated BIND data for the RRSet as a string.
+                 If there is a single resource record in the RRSet, you can pass in the single string.
+                 If there are multiple resource records  in this RRSet, pass in a list of strings.
+
+        """
+        if type(rdata) is not list:
+            rdata = [rdata]
+        rrset = {"ttl": ttl, "rdata": rdata}
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name,
+                                            json.dumps(rrset))
+
+    # delete an rrset
+    def delete_rrset(self, zone_name, rtype, owner_name):
+        """Deletes an RRSet.
+
+        Arguments:
+        zone_name -- The zone containing the RRSet to be deleted.  The trailing dot is optional.
+        rtype -- The type of the RRSet.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+
+        """
+        return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name)
+
+    # Accounts
+    # get account details for user
+    def get_account_details(self):
+        """Returns a list of all accounts of which the current user is a member."""
+        return self.rest_api_connection.get("/v1/accounts")
+
+    # Version
+    # get version
+    def version(self):
+        """Returns the version of the REST API server."""
+        return self.rest_api_connection.get("/v1/version")
+
+    # Status
+    # get status
+    def status(self):
+        """Returns the status of the REST API server."""
+        return self.rest_api_connection.get("/v1/status")
 
 
-def get(uri):
-    return do_call(uri, "GET")
+def build_params(uri, q, sort_info, page_info):
+    params = {}
+    if sort_info is not None:
+        params.update(sort_info.to_dict())
+    if page_info is not None:
+        params.update(page_info.to_dict())
+    if q is not None:
+        params.update(q)
+    params_str = urllib.urlencode(params)
+    if len(params_str) > 0:
+        uri = uri + "?" + params_str
+    return uri
 
 
-def post_multi_part(uri, **parts):
-    pass
-
-
-def post(uri, json):
-    return do_call(uri, "POST", json)
-
-
-def put(uri, json):
-    return do_call(uri, "PUT", json)
-
-
-def delete(uri):
-    return do_call(uri, "DELETE")
-
-
-def do_call(uri, method, body=None, retry=True):
-    h1 = get_connection()
-    h1.request(method, uri, body=body, headers=build_headers())
-    r1 = h1.getresponse()
-    # bad access token = status 400,
-    # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
-    json_body = json.loads(r1.read())
-    if retry and r1.status == 400 and json_body[u'errorCode'] == 60001:
-        refresh()
-        r1 = do_call(uri, method, body, False)
-        json_body = json.loads(r1.read())
-    return json_body
-
-
-use_http = True
-auth("bodnerdns", "Password2", "localhost:8080")
-print version()
-print status()
-account_details = get_account_details()
+c = RestApiClient("bodnerdns", "Password2", use_http=True, host="localhost:8080")
+print c.version()
+print c.status()
+account_details = c.get_account_details()
 account_name = account_details[u'list'][0][u'accountName']
 print account_name
-all_zones = get_zones_of_account(account_name)
+print c.create_primary_zone(account_name, "foo.invalid.")
+print c.get_zone_metadata("foo.invalid.")
+print c.delete_zone("foo.invalid.")
+all_zones = c.get_zones_of_account(account_name, page_info=PageInfo(offset=0, limit=5))
 first_zone_name = all_zones[u'list'][0][u'zoneProperties'][u'name']
 print first_zone_name
-print get_rrsets(first_zone_name)
-print create_rrset(first_zone_name, "A", "foo", 300, ["1.2.3.4"])
-print get_rrsets(first_zone_name)
-print edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
-print get_rrsets(first_zone_name)
-print delete_rrset(first_zone_name, "A", "foo")
-print get_rrsets(first_zone_name)
+print c.get_rrsets(first_zone_name)
+print c.create_rrset(first_zone_name, "A", "foo", 300, "1.2.3.4")
+print c.get_rrsets(first_zone_name)
+print c.edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
+print c.get_rrsets(first_zone_name)
+print c.delete_rrset(first_zone_name, "A", "foo")
+print c.get_rrsets(first_zone_name)
