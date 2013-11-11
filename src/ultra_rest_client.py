@@ -272,24 +272,3 @@ def build_params(uri, q, sort_info, page_info):
     if len(params_str) > 0:
         uri = uri + "?" + params_str
     return uri
-
-
-c = RestApiClient("bodnerdns", "Password2", use_http=True, host="localhost:8080")
-print c.version()
-print c.status()
-account_details = c.get_account_details()
-account_name = account_details[u'list'][0][u'accountName']
-print account_name
-print c.create_primary_zone(account_name, "foo.invalid.")
-print c.get_zone_metadata("foo.invalid.")
-print c.delete_zone("foo.invalid.")
-all_zones = c.get_zones_of_account(account_name, page_info=PageInfo(offset=0, limit=5))
-first_zone_name = all_zones[u'list'][0][u'zoneProperties'][u'name']
-print first_zone_name
-print c.get_rrsets(first_zone_name)
-print c.create_rrset(first_zone_name, "A", "foo", 300, "1.2.3.4")
-print c.get_rrsets(first_zone_name)
-print c.edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
-print c.get_rrsets(first_zone_name)
-print c.delete_rrset(first_zone_name, "A", "foo")
-print c.get_rrsets(first_zone_name)
