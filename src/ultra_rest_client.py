@@ -9,50 +9,6 @@ import json
 import urllib
 
 
-#sort The sort column used to order the list string
-#reverse Whether the list is ascending(false) or descending(true)
-class SortInfo:
-    def __init__(self, sort=None, reverse=False):
-        self.sort=sort
-        self.reverse=reverse
-
-    def sort(self):
-        return self.sort
-
-    def reverse(self):
-        return self.reverse
-
-    def to_dict(self):
-        out = {}
-        if self.sort is not None:
-            out["sort"]=self.sort
-        if self.reverse is not False:
-            out["reverse"]=self.reverse
-        return out
-
-
-#offset The position in the list for the first returned element(0 based)    int
-#limit The maximum number of rows requested int
-class PageInfo:
-    def __init__(self, offset=0, limit=None):
-        self.offset=offset
-        self.limit=limit
-
-    def offset(self):
-        return self.offset
-
-    def limit(self):
-        return self.limit
-
-    def to_dict(self):
-        out = {}
-        if self.limit is not None:
-            out["limit"] = self.limit
-        if self.offset != 0:
-            out["offset"] = self.offset
-        return out
-
-
 class RestApiClient:
     def __init__(self, username, password, use_http=False, host="restapi.ultradns.com"):
         """Initialize a Rest API Client.
@@ -85,7 +41,7 @@ class RestApiClient:
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
     # list zones for account
-    def get_zones_of_account(self, account_name, q=None, sort_info=None, page_info=None):
+    def get_zones_of_account(self, account_name, q=None, **kwargs):
         """Returns a list of zones for the specified account.
 
         Arguments:
@@ -98,16 +54,18 @@ class RestApiClient:
                 PRIMARY
                 SECONDARY
                 ALIAS
-        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
-             NAME
-             ACCOUNT_NAME
-             RECORD_COUNT
-             ZONE_TYPE
-        page_info -- The pagination parameters in a PageInfo class.
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                NAME
+                ACCOUNT_NAME
+                RECORD_COUNT
+                ZONE_TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
 
         """
         uri = "/v1/accounts/" + account_name + "/zones"
-        uri = build_params(uri, q, sort_info, page_info)
+        uri = build_params(uri, q, kwargs)
         return self.rest_api_connection.get(uri)
 
     # get zone metadata
@@ -132,8 +90,7 @@ class RestApiClient:
 
     # RRSets
     # list rrsets for a zone
-    # q	The query used to construct the list. Query operators are ttl, owner, and value
-    def get_rrsets(self, zone_name, q=None, sort_info=None, page_info=None):
+    def get_rrsets(self, zone_name, q=None, **kwargs):
         """Returns the list of RRSets in the specified zone.
 
         Arguments:
@@ -144,20 +101,22 @@ class RestApiClient:
              ttl - must match the TTL for the rrset
              owner - substring match of the owner name
              value - substring match of the first BIND field value
-        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
-             OWNER
-             TTL
-             TYPE
-        page_info -- The pagination parameters in a PageInfo class.
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                OWNER
+                TTL
+                TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
 
         """
         uri = "/v1/zones/" + zone_name + "/rrsets"
-        uri = build_params(uri, q, sort_info, page_info)
+        uri = build_params(uri, q, kwargs)
         return self.rest_api_connection.get(uri)
 
     # list rrsets by type for a zone
     # q	The query used to construct the list. Query operators are ttl, owner, and value
-    def get_rrsets_by_type(self, zone_name, rtype, q=None, sort_info=None, page_info=None):
+    def get_rrsets_by_type(self, zone_name, rtype, q=None, **kwargs):
         """Returns the list of RRSets in the specified zone of the specified type.
 
         Arguments:
@@ -170,15 +129,17 @@ class RestApiClient:
              ttl - must match the TTL for the rrset
              owner - substring match of the owner name
              value - substring match of the first BIND field value
-        sort_info -- The sorting parameters in a SortInfo class.  Valid values for the sort field are:
-             OWNER
-             TTL
-             TYPE
-        page_info -- The pagination parameters in a PageInfo class.
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                OWNER
+                TTL
+                TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
 
         """
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype
-        uri = build_params(uri, q, sort_info, page_info)
+        uri = build_params(uri, q, kwargs)
         return self.rest_api_connection.get(uri)
 
     # create an rrset
@@ -223,8 +184,8 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name,
-                                            json.dumps(rrset))
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name + "/default"
+        return self.rest_api_connection.put(uri,json.dumps(rrset))
 
     # delete an rrset
     def delete_rrset(self, zone_name, rtype, owner_name):
@@ -260,12 +221,9 @@ class RestApiClient:
         return self.rest_api_connection.get("/v1/status")
 
 
-def build_params(uri, q, sort_info, page_info):
+def build_params(uri, q, args):
     params = {}
-    if sort_info is not None:
-        params.update(sort_info.to_dict())
-    if page_info is not None:
-        params.update(page_info.to_dict())
+    params.update(args)
     if q is not None:
         params.update(q)
     params_str = urllib.urlencode(params)
