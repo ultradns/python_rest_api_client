@@ -6,8 +6,12 @@
 __author__ = 'Jon Bodner'
 
 import ultra_rest_client
+import sys
 
-c = ultra_rest_client.RestApiClient("gmonitor", "gmonitor")
+if len(sys.argv) != 3:
+    raise Exception("Expected use: python sample.py username password")
+
+c = ultra_rest_client.RestApiClient(sys.argv[1], sys.argv[2])
 print c.version()
 print c.status()
 account_details = c.get_account_details()
@@ -23,8 +27,12 @@ print c.get_rrsets(first_zone_name)
 print c.create_rrset(first_zone_name, "A", "foo", 300, "1.2.3.4")
 print c.get_rrsets(first_zone_name)
 print c.get_rrsets_by_type(first_zone_name, "A")
-#update rrset is broken, returns a GUID instead of JSON, so this call will fail!!!
-#print c.edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
+# the value returned from update rrset is broken.
+# the operation is performed correctly, but
+# it returns a GUID instead of JSON,
+# so the python code will throw an error
+# the next release of the REST API server fixes this bug
+# print c.edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
 print c.get_rrsets(first_zone_name)
 print c.get_rrsets_by_type(first_zone_name, "A")
 print c.delete_rrset(first_zone_name, "A", "foo")

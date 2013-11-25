@@ -49,7 +49,7 @@ class RestApiConnection:
     def auth(self, username, password):
         h1 = self._get_connection()
         h1.request("GET",
-                   "/v1/authorization?username=" + fix_param_value(username) + "&password=" + fix_param_value(password))
+                   "/v1/authorization?grant_type=password&username=" + fix_param_value(username) + "&password=" + fix_param_value(password))
         r1 = h1.getresponse()
         if r1.status == 200:
             json_body = json.loads(r1.read())
@@ -60,7 +60,7 @@ class RestApiConnection:
 
     def _refresh(self):
         h1 = self._get_connection()
-        h1.request("GET", "/v1/authorization/refresh")
+        h1.request("GET", "/v1/authorization/refresh?grant_type=refresh_token&refreshToken="+self.refresh_token)
         r1 = h1.getresponse()
         if r1.status == 200:
             json_body = json.loads(r1.read())
