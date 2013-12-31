@@ -37,7 +37,7 @@ class RestApiClient:
         """
         zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
         primary_zone_info = {"forceImport": True, "createType": "NEW"}
-        zone_data = {"zoneProperties": zone_properties, "primaryZoneInfo": primary_zone_info}
+        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
     # list zones for account
@@ -65,8 +65,8 @@ class RestApiClient:
 
         """
         uri = "/v1/accounts/" + account_name + "/zones"
-        uri = build_params(uri, q, kwargs)
-        return self.rest_api_connection.get(uri)
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri, params)
 
     # get zone metadata
     def get_zone_metadata(self, zone_name):
@@ -111,8 +111,8 @@ class RestApiClient:
 
         """
         uri = "/v1/zones/" + zone_name + "/rrsets"
-        uri = build_params(uri, q, kwargs)
-        return self.rest_api_connection.get(uri)
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri, params)
 
     # list rrsets by type for a zone
     # q	The query used to construct the list. Query operators are ttl, owner, and value
@@ -139,8 +139,8 @@ class RestApiClient:
 
         """
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype
-        uri = build_params(uri, q, kwargs)
-        return self.rest_api_connection.get(uri)
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri,params)
 
     # create an rrset
     def create_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
@@ -221,12 +221,9 @@ class RestApiClient:
         return self.rest_api_connection.get("/v1/status")
 
 
-def build_params(uri, q, args):
+def build_params(q, args):
     params = {}
     params.update(args)
     if q is not None:
         params.update(q)
-    params_str = urllib.urlencode(params)
-    if len(params_str) > 0:
-        uri = uri + "?" + params_str
-    return uri
+    return params
