@@ -184,7 +184,7 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name + "/default"
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name 
         return self.rest_api_connection.put(uri,json.dumps(rrset))
 
     # delete an rrset
