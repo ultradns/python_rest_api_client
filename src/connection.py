@@ -56,7 +56,7 @@ class RestApiConnection:
 
     def _refresh(self):
         h1 = self._get_connection()
-        payload = {"grant_type":"refresh_token","refreshToken":self.refresh_token}
+        payload = {"grant_type":"refresh_token","refresh_token":self.refresh_token}
         r1 = requests.post(h1+"/v1/authorization/token", data=payload)
         if r1.status_code == requests.codes.OK:
             json_body = r1.json()
@@ -94,7 +94,7 @@ class RestApiConnection:
             return {}
         json_body = r1.json()
         if type(json_body) is dict:
-            if retry and r1.status_code not in (requests.codes.BAD_REQUEST, requests.codes.UNAUTHORIZED) and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
+            if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
                 self._refresh()
                 r1 = self._do_call(uri, method, params, body, False)
                 json_body = r1.json()
