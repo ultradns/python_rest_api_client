@@ -96,8 +96,7 @@ class RestApiConnection:
         if type(json_body) is dict:
             if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
                 self._refresh()
-                r1 = self._do_call(uri, method, params, body, False)
-                json_body = r1.json()
+                json_body = self._do_call(uri, method, params, body, False)
             elif r1.status_code >= requests.codes.BAD_REQUEST:
                 raise RestError(json_body)
         return json_body
