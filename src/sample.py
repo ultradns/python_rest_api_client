@@ -42,3 +42,18 @@ print c.get_rrsets_by_type(first_zone_name, "A")
 print c.delete_rrset(first_zone_name, "A", "foo")
 print c.get_rrsets(first_zone_name)
 print c.get_rrsets_by_type(first_zone_name, "A")
+print c.batch([
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
+])
+print c.get_rrsets_by_type(first_zone_name, "A")
+print c.batch([
+    {'method': 'POST', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2', 'body': {'ttl': 100, 'rdata': ['2.4.6.8']}},
+    {'method': 'POST', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3', 'body': {'ttl': 100, 'rdata': ['20.40.60.80']}},
+])
+print c.get_rrsets_by_type(first_zone_name, "A")
+print c.batch([
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
+])
+print c.get_rrsets_by_type(first_zone_name, "A")

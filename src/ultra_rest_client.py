@@ -68,6 +68,31 @@ class RestApiClient:
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
+    # list zones for all user accounts
+    def get_zones(self, q=None, **kwargs):
+        """Returns a list of zones across all of the user's accounts.
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             name - substring match of the zone name
+             zone_type - one of:
+                PRIMARY
+                SECONDARY
+                ALIAS
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                NAME
+                ACCOUNT_NAME
+                RECORD_COUNT
+                ZONE_TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
+
+        """
+        uri = "/v1/zones"
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri, params)
+
     # get zone metadata
     def get_zone_metadata(self, zone_name):
         """Returns the metadata for the specified zone.
@@ -219,6 +244,22 @@ class RestApiClient:
     def status(self):
         """Returns the status of the REST API server."""
         return self.rest_api_connection.get("/v1/status")
+
+    # Batch
+    def batch(self, batch_list):
+        """Sends multiple requests as a single transaction.
+
+        Arguments:
+        batch_list -- a list of request objects.
+            Each request must have:
+            method -- valid values are POST, PATCH, PUT, GET, DELETE
+            uri -- The path for the request
+            If the request should have a body, there is a third field:
+            body (only if required) - The body of the request
+        """
+        return self.rest_api_connection.post("/v1/batch", json.dumps(batch_list))
+
+
 
 
 def build_params(q, args):

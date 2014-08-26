@@ -82,6 +82,9 @@ class RestApiConnection:
     def put(self, uri, json):
         return self._do_call(uri, "PUT", body=json)
 
+    def patch(self, uri, json):
+        return self._do_call(uri, "PATCH", body=json)
+
     def delete(self, uri):
         return self._do_call(uri, "DELETE")
 
