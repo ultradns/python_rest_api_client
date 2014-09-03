@@ -6,7 +6,6 @@
 __author__ = 'Jon Bodner'
 
 import ultra_rest_client
-import connection
 import sys
 
 if len(sys.argv) != 5 and len(sys.argv) != 3:
@@ -45,13 +44,10 @@ print 'delete_rrset %s ' % c.delete_rrset(first_zone_name, "A", "foo")
 print 'get_rrsets %s ' % c.get_rrsets(first_zone_name)
 print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
 print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo")
-try:
-    print 'batch delete %s ' % c.batch([
-        {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
-        {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
-    ])
-except connection.RestError as e:
-    print 'batch delete error %s ' % e
+print 'batch delete %s ' % c.batch([
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
+    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
+])
 
 print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
 print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo2")

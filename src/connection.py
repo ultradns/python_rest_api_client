@@ -100,6 +100,9 @@ class RestApiConnection:
             if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
                 self._refresh()
                 json_body = self._do_call(uri, method, params, body, False)
-            elif r1.status_code >= requests.codes.BAD_REQUEST:
-                raise RestError(json_body)
+            #disabling error raising for now, because it only happens for batch
+            #because all other errors are returned in a list, not in a dict
+            #should have been raising errors for those, too, but haven't been
+            #elif r1.status_code >= requests.codes.BAD_REQUEST:
+            #    raise RestError(json_body)
         return json_body
