@@ -167,6 +167,35 @@ class RestApiClient:
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri,params)
 
+    # list rrsets by type and owner for a zone
+    # q	The query used to construct the list. Query operators are ttl, owner, and value
+    def get_rrsets_by_type_owner(self, zone_name, rtype, owner_name, q=None, **kwargs):
+        """Returns the list of RRSets in the specified zone of the specified type.
+
+        Arguments:
+        zone_name -- The name of the zone.
+        rtype -- The type of the RRSets.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             ttl - must match the TTL for the rrset
+             value - substring match of the first BIND field value
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                TTL
+                TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
+
+        """
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/"+owner_name
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri, params)
+
     # create an rrset
     def create_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
         """Creates a new RRSet in the specified zone.
