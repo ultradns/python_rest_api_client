@@ -288,7 +288,232 @@ class RestApiClient:
         """
         return self.rest_api_connection.post("/v1/batch", json.dumps(batch_list))
 
+    # Create an SB Pool
+    # Sample JSON for an SB pool -- see the REST API docs for their descriptions
+    # {
+    #     "ttl": 120,
+    #     "rdata": [
+    #         "4.5.6.7", "199.7.167.22", "1.2.3.4", "5.6.7.8"
+    #     ],
+    #     "profile": {
+    #         "@context": "http://schemas.ultradns.com/SBPool.jsonschema",
+    #         "description": "description",
+    #         "runProbes": true,
+    #         "actOnProbes": true,
+    #         "order": "ROUND_ROBIN",
+    #         "maxActive": 1,
+    #         "maxServed": 0,
+    #         "rdataInfo": [
+    #             {
+    #                 "state": "ACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 2,
+    #                 "failoverDelay": 0,
+    #                 "threshold": 1
+    #             },
+    #             {
+    #                 "state": "INACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 1,
+    #                 "failoverDelay": 0,
+    #                 "threshold": 1
+    #             },
+    #             {
+    #                 "state": "ACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 1,
+    #                 "failoverDelay": 1,
+    #                 "threshold": 1
+    #             },
+    #             {
+    #                 "state": "INACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 2,
+    #                 "failoverDelay": 3,
+    #                 "threshold": 1
+    #             }
+    #         ],
+    #         "backupRecords": [
+    #             {
+    #                 "rdata":"1.2.2.2",
+    #                 "failoverDelay": 1
+    #             }
+    #         ]
+    #     }
+    # }
 
+    def _build_sb_rrset(self, backup_record_list, pool_info, rdata_info, ttl):
+        rdata = []
+        rdata_info_list = []
+        for rr in rdata_info:
+            rdata.append(rr)
+            rdata_info_list.append(rdata_info[rr])
+        profile = {"@context": "http://schemas.ultradns.com/SBPool.jsonschema"}
+        for p in pool_info:
+            profile[p] = pool_info[p]
+        profile["backupRecords"] = backup_record_list
+        profile["rdataInfo"] = rdata_info_list
+        rrset = {"ttl": ttl, "rdata": rdata, "profile": profile}
+        return rrset
+
+    def create_sb_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record_list):
+        """Creates a new SB Pool.
+
+        Arguments:
+        zone_name -- The zone that contains the RRSet.  The trailing dot is optional.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        ttl -- The updated TTL value for the RRSet.
+        pool_info -- dict of information about the pool
+        rdata_info -- dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        backup_record_list -- list of dicts of information about the backup (all-fail) records in the pool.
+                        There are two key/value in each dict:
+                            rdata - the A or CNAME for the backup record
+                            failoverDelay - the time to wait to fail over (optional, defaults to 0)
+        """
+
+        rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
+        print json.dumps(rrset)
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
+                                             json.dumps(rrset))
+
+
+    # Update an SB Pool
+    def edit_sb_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record_list):
+        """Updates an existing SB Pool in the specified zone.
+        :param zone_name: The zone that contains the RRSet.  The trailing dot is optional.
+        :param owner_name: The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        :param ttl: The updated TTL value for the RRSet.
+        :param pool_info: dict of information about the pool
+        :param rdata_info: dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        :param backup_record_list: list of dicts of information about the backup (all-fail) records in the pool.
+                        There are two key/value in each dict:
+                            rdata - the A or CNAME for the backup record
+                            failoverDelay - the time to wait to fail over (optional, defaults to 0)
+        """
+        rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
+                                             json.dumps(rrset))
+
+    def _build_tc_rrset(self, backup_record, pool_info, rdata_info, ttl):
+        rdata = []
+        rdata_info_list = []
+        for rr in rdata_info:
+            rdata.append(rr)
+            rdata_info_list.append(rdata_info[rr])
+        profile = {"@context": "http://schemas.ultradns.com/TCPool.jsonschema"}
+        for p in pool_info:
+            profile[p] = pool_info[p]
+        profile["backupRecord"] = backup_record
+        profile["rdataInfo"] = rdata_info_list
+        rrset = {"ttl": ttl, "rdata": rdata, "profile": profile}
+        return rrset
+
+    # Create a TC Pool
+    # Sample JSON for a TC pool -- see the REST API docs for their descriptions
+    # {
+    # "ttl": 120,
+    #     "rdata": [
+    #         "4.5.6.7", "199.7.167.22", "1.2.3.4", "5.6.7.8"
+    #     ],
+    #     "profile": {
+    #         "@context": "http://schemas.ultradns.com/TCPool.jsonschema",
+    #         "description": "description",
+    #         "runProbes": true,
+    #         "actOnProbes": true,
+    #         "maxToLB": 1,
+    #         "rdataInfo": [
+    #             {
+    #                 "state": "ACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 2,
+    #                 "failoverDelay": 0,
+    #                 "threshold": 1,
+    #                 "weight": 2
+    #             },
+    #             {
+    #                 "state": "INACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 1,
+    #                 "failoverDelay": 0,
+    #                 "threshold": 1,
+    #                 "weight": 2
+    #             },
+    #             {
+    #                 "state": "ACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 1,
+    #                 "failoverDelay": 1,
+    #                 "threshold": 1,
+    #                 "weight": 4
+    #             },
+    #             {
+    #                 "state": "INACTIVE",
+    #                 "runProbes": true,
+    #                 "priority": 2,
+    #                 "failoverDelay": 3,
+    #                 "threshold": 1,
+    #                 "weight": 8
+    #             }
+    #         ],
+    #         "backupRecord": {
+    #                 "rdata":"1.2.2.2",
+    #                 "failoverDelay": 1
+    #         }
+    #     }
+    # }
+    def create_tc_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record):
+        """Creates a new TC Pool.
+
+        Arguments:
+        zone_name -- The zone that contains the RRSet.  The trailing dot is optional.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        ttl -- The updated TTL value for the RRSet.
+        pool_info -- dict of information about the pool
+        rdata_info -- dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        backup_record -- dict of information about the backup (all-fail) records in the pool.
+                        There are two key/value in the dict:
+                            rdata - the A or CNAME for the backup record
+                            failoverDelay - the time to wait to fail over (optional, defaults to 0)
+        """
+
+        rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
+        print json.dumps(rrset)
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
+                                             json.dumps(rrset))
+
+
+    # Update an SB Pool
+    def edit_tc_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record):
+        """Updates an existing TC Pool in the specified zone.
+        :param zone_name: The zone that contains the RRSet.  The trailing dot is optional.
+        :param owner_name: The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        :param ttl: The updated TTL value for the RRSet.
+        :param pool_info: dict of information about the pool
+        :param rdata_info: dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        :param backup_record: dict of information about the backup (all-fail) records in the pool.
+                        There are two key/value in the dict:
+                            rdata - the A or CNAME for the backup record
+                            failoverDelay - the time to wait to fail over (optional, defaults to 0)
+        """
+        rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
+                                            json.dumps(rrset))
 
 
 def build_params(q, args):
