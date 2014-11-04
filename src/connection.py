@@ -65,16 +65,21 @@ class RestApiConnection:
         else:
             raise AuthError(r1.json())
 
-    def _build_headers(self):
-        return {"Content-type": "application/json",
-                "Accept": "application/json",
-                "Authorization": "Bearer " + self.access_token}
+    def _build_headers(self, content_type):
+        result = {"Accept": "application/json",
+                  "Authorization": "Bearer " + self.access_token}
+        if content_type != "":
+            result["Content-type"] = content_type
+        return result
 
-    def get(self, uri, params={}):
+    def get(self, uri, params=None):
+        if params is None:
+            params = {}
         return self._do_call(uri, "GET", params=params)
 
-    def post_multi_part(self, uri, **parts):
-        pass
+    def post_multi_part(self, uri, files):
+        #use empty string for content type so we don't set it
+        return self._do_call(uri, "POST", files=files, content_type="")
 
     def post(self, uri, json):
         return self._do_call(uri, "POST", body=json)
@@ -88,9 +93,9 @@ class RestApiConnection:
     def delete(self, uri):
         return self._do_call(uri, "DELETE")
 
-    def _do_call(self, uri, method, params=None, body=None, retry=True):
+    def _do_call(self, uri, method, params=None, body=None, retry=True, files=None, content_type = "application/json"):
         h1 = self._get_connection()
-        r1 = requests.request(method, h1+uri, params=params, data=body, headers=self._build_headers())
+        r1 = requests.request(method, h1+uri, params=params, data=body, headers=self._build_headers(content_type), files=files)
         # bad access token = status 400,
         # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
         if r1.status_code == requests.codes.NO_CONTENT:

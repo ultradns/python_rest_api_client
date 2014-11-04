@@ -6,7 +6,6 @@
 __author__ = 'Jon Bodner'
 import connection
 import json
-import urllib
 
 
 class RestApiClient:
@@ -39,6 +38,22 @@ class RestApiClient:
         primary_zone_info = {"forceImport": True, "createType": "NEW"}
         zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
+
+    def create_primary_zone_by_upload(self, account_name, zone_name, bind_file):
+        """Creates a new primary zone by uploading a bind file
+
+        Arguments:
+        account_name -- The name of the account that will contain this zone.
+        zone_name -- The name of the zone.  It must be unique.
+        bind_file -- The file to upload.
+
+        """
+        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
+        primary_zone_info = {"forceImport": True, "createType": "UPLOAD"}
+        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
+        files = {'zone': ('', json.dumps(zone_data), 'application/json'),
+                 'file': ('file', open(bind_file, 'rb'), 'application/octet-stream')}
+        return self.rest_api_connection.post_multi_part("/v1/zones", files)
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
@@ -111,7 +126,7 @@ class RestApiClient:
         zone_name -- The name of the zone being deleted.
 
         """
-        return self.rest_api_connection.delete("/v1/zones/"+zone_name)
+        return self.rest_api_connection.delete("/v1/zones/" + zone_name)
 
     # RRSets
     # list rrsets for a zone
@@ -165,7 +180,7 @@ class RestApiClient:
         """
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype
         params = build_params(q, kwargs)
-        return self.rest_api_connection.get(uri,params)
+        return self.rest_api_connection.get(uri, params)
 
     # list rrsets by type and owner for a zone
     # q	The query used to construct the list. Query operators are ttl, owner, and value
@@ -192,7 +207,7 @@ class RestApiClient:
         limit -- The maximum number of rows to be returned.
 
         """
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/"+owner_name
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
@@ -216,7 +231,8 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        return self.rest_api_connection.post("/v1/zones/"+zone_name+"/rrsets/"+rtype+"/"+owner_name, json.dumps(rrset))
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name,
+                                             json.dumps(rrset))
 
     # edit an rrset(PUT)
     def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
@@ -238,8 +254,8 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name 
-        return self.rest_api_connection.put(uri,json.dumps(rrset))
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
+        return self.rest_api_connection.put(uri, json.dumps(rrset))
 
     # delete an rrset
     def delete_rrset(self, zone_name, rtype, owner_name):
@@ -291,7 +307,7 @@ class RestApiClient:
     # Create an SB Pool
     # Sample JSON for an SB pool -- see the REST API docs for their descriptions
     # {
-    #     "ttl": 120,
+    # "ttl": 120,
     #     "rdata": [
     #         "4.5.6.7", "199.7.167.22", "1.2.3.4", "5.6.7.8"
     #     ],
@@ -400,7 +416,7 @@ class RestApiClient:
         """
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
         return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
-                                             json.dumps(rrset))
+                                            json.dumps(rrset))
 
     def _build_tc_rrset(self, backup_record, pool_info, rdata_info, ttl):
         rdata = []
