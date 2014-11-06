@@ -101,6 +101,9 @@ class RestApiConnection:
         if r1.status_code == requests.codes.NO_CONTENT:
             return {}
         json_body = r1.json()
+        # if this is a background task, add the task id to the body
+        if r1.status_code == requests.codes.ACCEPTED:
+            json_body['task_id'] = r1.headers['x-task-id']
         if type(json_body) is dict:
             if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
                 self._refresh()

@@ -1,0 +1,19 @@
+;File created: 10/30/2014 23:26
+;Record count: 10
+$ORIGIN sample.client.me.
+@	86400	IN	SOA pdns196.ultradns.com. admin.client.me. (
+			2014102104	;Serial
+			86400		;Refresh
+			86400		;Retry
+			86400		;Expire
+			86400		;Minimum
+		)
+@	86400	IN	NS	pdns196.ultradns.com.
+@	86400	IN	NS	pdns196.ultradns.net.
+@	86400	IN	NS	pdns196.ultradns.biz.
+@	86400	IN	NS	pdns196.ultradns.org.
+@	86400	IN	NS	pdns196.ultradns.info.
+@	86400	IN	NS	pdns196.ultradns.co.uk.
+test1	3600	IN	A	1.1.1.1
+test3	3600	IN	A	2.2.2.2
+test2	3600	IN	A	1.1.1.1

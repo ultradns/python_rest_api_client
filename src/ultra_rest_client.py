@@ -290,6 +290,16 @@ class RestApiClient:
         """Returns the status of the REST API server."""
         return self.rest_api_connection.get("/v1/status")
 
+    # Tasks
+    def get_all_tasks(self):
+        return self.rest_api_connection.get("/v1/tasks")
+
+    def get_task(self, task_id):
+        return self.rest_api_connection.get("/v1/tasks/"+task_id)
+
+    def clear_task(self, task_id):
+        return self.rest_api_connection.delete("/v1/tasks/"+task_id)
+
     # Batch
     def batch(self, batch_list):
         """Sends multiple requests as a single transaction.
@@ -536,5 +546,8 @@ def build_params(q, args):
     params = {}
     params.update(args)
     if q is not None:
-        params.update(q)
+        all = []
+        for k in q:
+            all.append("%s:%s" % (k, q[k]))
+        params['q']= ' '.join(all)
     return params
