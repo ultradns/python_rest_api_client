@@ -39,6 +39,7 @@ class RestApiClient:
         zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
+    # create primary zone by file upload
     def create_primary_zone_by_upload(self, account_name, zone_name, bind_file):
         """Creates a new primary zone by uploading a bind file
 
@@ -54,6 +55,66 @@ class RestApiClient:
         files = {'zone': ('', json.dumps(zone_data), 'application/json'),
                  'file': ('file', open(bind_file, 'rb'), 'application/octet-stream')}
         return self.rest_api_connection.post_multi_part("/v1/zones", files)
+
+    # create a primary zone using axfr
+    def create_primary_zone_by_axfr(self, account_name, zone_name, master, tsig_key=None, key_value=None):
+        """Creates a new primary zone by zone transferring off a master.
+
+        Arguments:
+        account_name -- The name of the account that will contain this zone.
+        zone_name -- The name of the zone.  It must be unique.
+        master -- Primary name server IP address.
+		
+        Keyword Arguments:
+        tsig_key -- For TSIG-enabled zones: The transaction signature key.
+                    NOTE: Requires key_value.
+        key_value -- TSIG key secret.
+
+        """
+        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
+        if tsig_key is not None and key_value is not None:
+            name_server_info = {"ip": master, "tsigKey": tsig_key, "tsigKeyValue": key_value}
+        else:
+            name_server_info = {"ip": master}
+        primary_zone_info = {"forceImport": True, "createType": "TRANSFER", "nameServer": name_server_info}
+        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
+        return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
+		
+    # create a secondary zone
+    def create_secondary_zone(self, account_name, zone_name, master, tsig_key=None, key_value=None):
+        """Creates a new secondary zone.
+
+        Arguments:
+        account_name -- The name of the account.
+        zone_name -- The name of the zone.
+        master -- Primary name server IP address.
+		
+        Keyword Arguments:
+        tsig_key -- For TSIG-enabled zones: The transaction signature key.
+                    NOTE: Requires key_value.
+        key_value -- TSIG key secret.
+
+        """
+        zone_properties = {"name": zone_name, "accountName": account_name, "type": "SECONDARY"}
+        if tsig_key is not None and key_value is not None:
+            name_server_info = {"ip": master, "tsigKey": tsig_key, "tsigKeyValue": key_value}
+        else:
+            name_server_info = {"ip": master}
+        name_server_ip_1 = {"nameServerIp1": name_server_info}
+        name_server_ip_list = {"nameServerIpList": name_server_ip_1}
+        secondary_zone_info = {"primaryNameServers": name_server_ip_list}
+        zone_data = {"properties": zone_properties, "secondaryCreateInfo": secondary_zone_info}
+        return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
+		
+    # force zone axfr
+    def force_axfr(self, zone_name):
+        """Force a secondary zone transfer.
+
+        Arguments:
+        zone_name -- The zone name.  The trailing dot is optional.
+
+        """
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/transfer")
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
@@ -234,7 +295,7 @@ class RestApiClient:
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name,
                                              json.dumps(rrset))
 
-    # edit an rrset(PUT)
+    # edit an rrset (PUT)
     def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
         """Updates an existing RRSet in the specified zone.
 
@@ -256,6 +317,28 @@ class RestApiClient:
         rrset = {"ttl": ttl, "rdata": rdata}
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
         return self.rest_api_connection.put(uri, json.dumps(rrset))
+
+    # edit an rrset's rdata (PATCH)
+    def edit_rrset_rdata(self, zone_name, rtype, owner_name, rdata):
+        """Updates an existing RRSet's Rdata in the specified zone.
+
+        Arguments:
+        zone_name -- The zone that contains the RRSet.  The trailing dot is optional.
+        rtype -- The type of the RRSet.  This can be numeric (1) or
+                 if a well-known name is defined for the type (A), you can use it instead.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        rdata -- The updated BIND data for the RRSet as a string.
+                 If there is a single resource record in the RRSet, you can pass in the single string.
+                 If there are multiple resource records  in this RRSet, pass in a list of strings.
+
+        """
+        if type(rdata) is not list:
+            rdata = [rdata]
+        rrset = {"rdata": rdata}
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name 
+        return self.rest_api_connection.patch(uri,json.dumps(rrset))
 
     # delete an rrset
     def delete_rrset(self, zone_name, rtype, owner_name):

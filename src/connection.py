@@ -81,8 +81,11 @@ class RestApiConnection:
         #use empty string for content type so we don't set it
         return self._do_call(uri, "POST", files=files, content_type="")
 
-    def post(self, uri, json):
-        return self._do_call(uri, "POST", body=json)
+    def post(self, uri, json=None):
+        if json is not None:
+            return self._do_call(uri, "POST", body=json)
+        else:
+            return self._do_call(uri, "POST")
 
     def put(self, uri, json):
         return self._do_call(uri, "PUT", body=json)
