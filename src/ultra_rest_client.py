@@ -189,7 +189,7 @@ class RestApiClient:
         """
         return self.rest_api_connection.delete("/v1/zones/" + zone_name)
 		
-    # update a zone (PATCH)
+    # update secondary zone name servers (PATCH)
     def edit_secondary_name_server(self, zone_name, primary=None, backup=None, second_backup=None):
         """Edit the axfr name servers of a secondary zone.
         
@@ -212,7 +212,6 @@ class RestApiClient:
         name_server_ip_list = {"nameServerIpList": name_server_info}
         secondary_zone_info = {"primaryNameServers": name_server_ip_list}
         zone_data = {"secondaryCreateInfo": secondary_zone_info}
-        print json.dumps(zone_data)
         return self.rest_api_connection.patch("/v1/zones/" + zone_name, json.dumps(zone_data))
 
     # RRSets
