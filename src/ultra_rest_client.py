@@ -208,7 +208,7 @@ class RestApiClient:
         if backup is not None:
             name_server_info['nameServerIp2'] = {'ip':backup}
         if second_backup is not None:
-            name_server_info['nameServerIp3'] = {'ip':backup}
+            name_server_info['nameServerIp3'] = {'ip':secondary_backup}
         name_server_ip_list = {"nameServerIpList": name_server_info}
         secondary_zone_info = {"primaryNameServers": name_server_ip_list}
         zone_data = {"secondaryCreateInfo": secondary_zone_info}
