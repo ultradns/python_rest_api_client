@@ -115,6 +115,16 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/transfer")
+     
+    # convert secondary
+    def convert_zone(self, zone_name):
+    """Convert a secondary zone to primary. This cannot be reversed.
+    
+    Arguments:
+    zone_name -- The zone name. The trailing dot is optional.
+    
+    """
+    return self.rest_api_connection.post("/v1/zones/" + zone_name + "/convert")
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
