@@ -118,13 +118,13 @@ class RestApiClient:
      
     # convert secondary
     def convert_zone(self, zone_name):
-    """Convert a secondary zone to primary. This cannot be reversed.
-    
-    Arguments:
-    zone_name -- The zone name. The trailing dot is optional.
-    
-    """
-    return self.rest_api_connection.post("/v1/zones/" + zone_name + "/convert")
+        """Convert a secondary zone to primary. This cannot be reversed.
+
+        Arguments:
+        zone_name -- The zone name. The trailing dot is optional.
+
+        """
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/convert")
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
@@ -218,7 +218,7 @@ class RestApiClient:
         if backup is not None:
             name_server_info['nameServerIp2'] = {'ip':backup}
         if second_backup is not None:
-            name_server_info['nameServerIp3'] = {'ip':secondary_backup}
+            name_server_info['nameServerIp3'] = {'ip':second_backup}
         name_server_ip_list = {"nameServerIpList": name_server_info}
         secondary_zone_info = {"primaryNameServers": name_server_ip_list}
         zone_data = {"secondaryCreateInfo": secondary_zone_info}
