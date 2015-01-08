@@ -105,7 +105,7 @@ class RestApiClient:
         secondary_zone_info = {"primaryNameServers": name_server_ip_list}
         zone_data = {"properties": zone_properties, "secondaryCreateInfo": secondary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
-		
+        
     # force zone axfr
     def force_axfr(self, zone_name):
         """Force a secondary zone transfer.
@@ -327,8 +327,7 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name,
-                                             json.dumps(rrset))
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name, json.dumps(rrset))
 
     # edit an rrset (PUT)
     def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
@@ -389,7 +388,48 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name)
-
+        
+    # Web Forwards
+    # get web forwards
+    def get_web_forwards(self, zone_name):
+        """Return all web forwards for a specific zone.
+        
+        Arguments:
+        zone_name -- The zone for which to return a list of current web forwards. The response will include
+                             the system-generated guid for each object.
+        
+        """
+        return self.rest_api_connection.get("/v1/zones/" + zone_name + "/webforwards")
+    
+    # create web forward
+    def create_web_forward(self, zone_name, request_to, redirect_to, forward_type):
+        """Create a web forward record.
+        
+        Arguments:
+        zone_name -- The zone in which the web forward is to be created.
+        request_to -- The URL to be redirected. You may use http:// and ftp://.
+        forward_type -- The type of forward. Valid options include:
+                                   Framed
+                                   HTTP_301_REDIRECT
+                                   HTTP_302_REDIRECT
+                                   HTTP_303_REDIRECT
+                                   HTTP_307_REDIRECT
+		
+        """
+        web_forward = {"requestTo": request_to, "defaultRedirectTo": redirect_to, "defaultForwardType": forward_type}
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/webforwards", json.dumps(web_forward))
+        
+    # delete web forward
+    def delete_web_forward(self, zone_name, guid):
+        """Return all web forwards for a specific zone.
+        
+        Arguments:
+        zone_name -- The zone containing the web forward to be deleted.
+        guid -- The system-generated unique id for the web forward.
+        
+        """
+        return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/webforwards/" + guid)
+    
     # Accounts
     # get account details for user
     def get_account_details(self):
@@ -521,8 +561,7 @@ class RestApiClient:
 
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
         print json.dumps(rrset)
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
-                                             json.dumps(rrset))
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
     # Update an SB Pool
@@ -543,8 +582,7 @@ class RestApiClient:
                             failoverDelay - the time to wait to fail over (optional, defaults to 0)
         """
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
-                                            json.dumps(rrset))
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
     def _build_tc_rrset(self, backup_record, pool_info, rdata_info, ttl):
         rdata = []
@@ -634,8 +672,7 @@ class RestApiClient:
 
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
         print json.dumps(rrset)
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
-                                             json.dumps(rrset))
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
     # Update an SB Pool
@@ -656,8 +693,7 @@ class RestApiClient:
                             failoverDelay - the time to wait to fail over (optional, defaults to 0)
         """
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name,
-                                            json.dumps(rrset))
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
 def build_params(q, args):
