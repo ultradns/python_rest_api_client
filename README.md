@@ -3,15 +3,16 @@ python_rest_api_client
 
 A sample Python client for communicating with the UltraDNS REST API
 
-Dependencies
-============
+Dependencies and Installation
+========================
 
 This sample code depends on the requests library, which can be found at: http://docs.python-requests.org/en/latest/
 
-If you have pip installed, you can add requests to your environment with:
+If you have pip installed, you can add the client and requests to your environment with:
 
-pip install requests
-
+```
+pip install ultra_rest_client
+```
 
 Functionality
 =============
