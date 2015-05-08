@@ -4,7 +4,7 @@
 # product names, company names, marks, logos and symbols may be trademarks
 # of their respective owners.
 __author__ = 'Jon Bodner'
-from ultra_rest_client import connection
+from .connection import RestApiConnection
 import json
 
 
@@ -21,7 +21,7 @@ class RestApiClient:
         host -- Allows you to point to a server other than the production server.
 
         """
-        self.rest_api_connection = connection.RestApiConnection(use_http, host)
+        self.rest_api_connection = RestApiConnection(use_http, host)
         self.rest_api_connection.auth(username, password)
 
     # Zones
