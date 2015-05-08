@@ -4,7 +4,7 @@
 # product names, company names, marks, logos and symbols may be trademarks
 # of their respective owners.
 __author__ = 'Jon Bodner'
-import connection
+from ultra_rest_client import connection
 import json
 
 
@@ -560,7 +560,6 @@ class RestApiClient:
         """
 
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
-        print json.dumps(rrset)
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
@@ -671,7 +670,6 @@ class RestApiClient:
         """
 
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
-        print json.dumps(rrset)
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
