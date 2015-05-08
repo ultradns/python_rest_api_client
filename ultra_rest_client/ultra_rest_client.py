@@ -4,7 +4,7 @@
 # product names, company names, marks, logos and symbols may be trademarks
 # of their respective owners.
 __author__ = 'Jon Bodner'
-import connection
+from ultra_rest_client import connection
 import json
 
 
@@ -64,7 +64,7 @@ class RestApiClient:
         account_name -- The name of the account that will contain this zone.
         zone_name -- The name of the zone.  It must be unique.
         master -- Primary name server IP address.
-		
+
         Keyword Arguments:
         tsig_key -- For TSIG-enabled zones: The transaction signature key.
                     NOTE: Requires key_value.
@@ -79,7 +79,7 @@ class RestApiClient:
         primary_zone_info = {"forceImport": True, "createType": "TRANSFER", "nameServer": name_server_info}
         zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
-		
+
     # create a secondary zone
     def create_secondary_zone(self, account_name, zone_name, master, tsig_key=None, key_value=None):
         """Creates a new secondary zone.
@@ -88,7 +88,7 @@ class RestApiClient:
         account_name -- The name of the account.
         zone_name -- The name of the zone.
         master -- Primary name server IP address.
-		
+
         Keyword Arguments:
         tsig_key -- For TSIG-enabled zones: The transaction signature key.
                     NOTE: Requires key_value.
@@ -105,7 +105,7 @@ class RestApiClient:
         secondary_zone_info = {"primaryNameServers": name_server_ip_list}
         zone_data = {"properties": zone_properties, "secondaryCreateInfo": secondary_zone_info}
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
-        
+
     # force zone axfr
     def force_axfr(self, zone_name):
         """Force a secondary zone transfer.
@@ -115,7 +115,7 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/transfer")
-     
+
     # convert secondary
     def convert_zone(self, zone_name):
         """Convert a secondary zone to primary. This cannot be reversed.
@@ -198,19 +198,19 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.delete("/v1/zones/" + zone_name)
-		
+
     # update secondary zone name servers (PATCH)
     def edit_secondary_name_server(self, zone_name, primary=None, backup=None, second_backup=None):
         """Edit the axfr name servers of a secondary zone.
-        
+
         Arguments:
         zone_name -- The name of the secondary zone being edited.
         primary -- The primary name server value.
-        
+
         Keyword Arguments:
         backup -- The backup name server if any.
         second_backup -- The second backup name server.
-        
+
         """
         name_server_info = {}
         if primary is not None:
@@ -371,7 +371,7 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"rdata": rdata}
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name 
+        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
         return self.rest_api_connection.patch(uri,json.dumps(rrset))
 
     # delete an rrset
@@ -388,23 +388,23 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name)
-        
+
     # Web Forwards
     # get web forwards
     def get_web_forwards(self, zone_name):
         """Return all web forwards for a specific zone.
-        
+
         Arguments:
         zone_name -- The zone for which to return a list of current web forwards. The response will include
                              the system-generated guid for each object.
-        
+
         """
         return self.rest_api_connection.get("/v1/zones/" + zone_name + "/webforwards")
-    
+
     # create web forward
     def create_web_forward(self, zone_name, request_to, redirect_to, forward_type):
         """Create a web forward record.
-        
+
         Arguments:
         zone_name -- The zone in which the web forward is to be created.
         request_to -- The URL to be redirected. You may use http:// and ftp://.
@@ -414,22 +414,22 @@ class RestApiClient:
                                    HTTP_302_REDIRECT
                                    HTTP_303_REDIRECT
                                    HTTP_307_REDIRECT
-		
+
         """
         web_forward = {"requestTo": request_to, "defaultRedirectTo": redirect_to, "defaultForwardType": forward_type}
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/webforwards", json.dumps(web_forward))
-        
+
     # delete web forward
     def delete_web_forward(self, zone_name, guid):
         """Return all web forwards for a specific zone.
-        
+
         Arguments:
         zone_name -- The zone containing the web forward to be deleted.
         guid -- The system-generated unique id for the web forward.
-        
+
         """
         return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/webforwards/" + guid)
-    
+
     # Accounts
     # get account details for user
     def get_account_details(self):
@@ -560,7 +560,6 @@ class RestApiClient:
         """
 
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
-        print json.dumps(rrset)
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
@@ -671,7 +670,6 @@ class RestApiClient:
         """
 
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
-        print json.dumps(rrset)
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
 
