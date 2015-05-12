@@ -375,10 +375,12 @@ class RestApiClient:
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"rdata": rdata}
+        method = "patch"
         if profile:
             rrset["profile"] = profile
+            method = "put"
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
-        return self.rest_api_connection.patch(uri,json.dumps(rrset))
+        return getattr(self.rest_api_connection, method)(uri,json.dumps(rrset))
 
     # delete an rrset
     def delete_rrset(self, zone_name, rtype, owner_name):
