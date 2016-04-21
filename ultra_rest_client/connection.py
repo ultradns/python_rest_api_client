@@ -25,11 +25,12 @@ class RestError(Exception):
 
 
 class RestApiConnection:
-    def __init__(self, use_http=False, host="restapi.ultradns.com"):
+    def __init__(self, proxy, use_http=False, host="restapi.ultradns.com"):
         self.use_http = use_http
         self.host = host
         self.access_token = ""
         self.refresh_token = ""
+	    self.proxy = proxy
 
     def _get_connection(self):
         if self.use_http:
@@ -46,7 +47,7 @@ class RestApiConnection:
     def auth(self, username, password):
         h1 = self._get_connection()
         payload = {"grant_type":"password", "username":username, "password":password}
-        r1 = requests.post(h1+"/v1/authorization/token",data=payload)
+        r1 = requests.post(h1+"/v1/authorization/token",data=payload, proxies=self.proxy)
         if r1.status_code == requests.codes.OK:
             json_body = r1.json()
             self.access_token = json_body[u'accessToken']
@@ -57,7 +58,7 @@ class RestApiConnection:
     def _refresh(self):
         h1 = self._get_connection()
         payload = {"grant_type":"refresh_token","refresh_token":self.refresh_token}
-        r1 = requests.post(h1+"/v1/authorization/token", data=payload)
+        r1 = requests.post(h1+"/v1/authorization/token", data=payload, proxies=self.proxy)
         if r1.status_code == requests.codes.OK:
             json_body = r1.json()
             self.access_token = json_body[u'accessToken']
@@ -98,7 +99,7 @@ class RestApiConnection:
 
     def _do_call(self, uri, method, params=None, body=None, retry=True, files=None, content_type = "application/json"):
         h1 = self._get_connection()
-        r1 = requests.request(method, h1+uri, params=params, data=body, headers=self._build_headers(content_type), files=files)
+        r1 = requests.request(method, h1+uri, params=params, data=body, headers=self._build_headers(content_type), files=files, proxies=self.proxy)
         # bad access token = status 400,
         # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
         if r1.status_code == requests.codes.NO_CONTENT:

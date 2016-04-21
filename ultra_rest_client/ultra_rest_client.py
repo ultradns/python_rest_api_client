@@ -9,7 +9,7 @@ import json
 
 
 class RestApiClient:
-    def __init__(self, username, password, use_http=False, host="restapi.ultradns.com"):
+    def __init__(self, username, password, use_http=False, host="restapi.ultradns.com", proxy=None):
         """Initialize a Rest API Client.
 
         Arguments:
@@ -21,7 +21,7 @@ class RestApiClient:
         host -- Allows you to point to a server other than the production server.
 
         """
-        self.rest_api_connection = RestApiConnection(use_http, host)
+        self.rest_api_connection = RestApiConnection(proxy, use_http, host)
         self.rest_api_connection.auth(username, password)
 
     # Zones
@@ -330,7 +330,7 @@ class RestApiClient:
         return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name, json.dumps(rrset))
 
     # edit an rrset (PUT)
-    def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata, profile=None):
+    def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata):
         """Updates an existing RRSet in the specified zone.
 
         Arguments:
@@ -344,19 +344,16 @@ class RestApiClient:
         rdata -- The updated BIND data for the RRSet as a string.
                  If there is a single resource record in the RRSet, you can pass in the single string.
                  If there are multiple resource records  in this RRSet, pass in a list of strings.
-        profile -- The profile info if this is updating a resource pool
 
         """
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        if profile:
-            rrset["profile"] = profile
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
         return self.rest_api_connection.put(uri, json.dumps(rrset))
 
     # edit an rrset's rdata (PATCH)
-    def edit_rrset_rdata(self, zone_name, rtype, owner_name, rdata, profile=None):
+    def edit_rrset_rdata(self, zone_name, rtype, owner_name, rdata):
         """Updates an existing RRSet's Rdata in the specified zone.
 
         Arguments:
@@ -369,18 +366,13 @@ class RestApiClient:
         rdata -- The updated BIND data for the RRSet as a string.
                  If there is a single resource record in the RRSet, you can pass in the single string.
                  If there are multiple resource records  in this RRSet, pass in a list of strings.
-        profile -- The profile info if this is updating a resource pool
 
         """
         if type(rdata) is not list:
             rdata = [rdata]
         rrset = {"rdata": rdata}
-        method = "patch"
-        if profile:
-            rrset["profile"] = profile
-            method = "put"
         uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
-        return getattr(self.rest_api_connection, method)(uri,json.dumps(rrset))
+        return self.rest_api_connection.patch(uri,json.dumps(rrset))
 
     # delete an rrset
     def delete_rrset(self, zone_name, rtype, owner_name):
