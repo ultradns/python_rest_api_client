@@ -9,6 +9,7 @@ import ultra_rest_client
 import sys
 import time
 
+
 if len(sys.argv) != 5 and len(sys.argv) != 3:
     raise Exception("Expected use: python sample.py username password [use_http host:port]")
 
@@ -16,12 +17,16 @@ username = sys.argv[1]
 password = sys.argv[2]
 use_http = 'False'
 domain = 'restapi.ultradns.com'
+proxyDict = {
+              "http": "http://yourproxy.com:port",
+              "https" "http://yourproxy.com:port"
+              }
 
 if len(sys.argv) == 5:
     use_http = sys.argv[3]
     domain = sys.argv[4]
 
-c = ultra_rest_client.RestApiClient(username, password, 'True' == use_http, domain)
+c = ultra_rest_client.RestApiClient(username, password, 'True' == use_http, domain, proxyDict)
 print 'version %s' % c.version()
 print 'status %s' % c.status()
 account_details = c.get_account_details()
