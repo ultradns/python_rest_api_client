@@ -480,6 +480,67 @@ class RestApiClient:
         """
         return self.rest_api_connection.post("/v1/batch", json.dumps(batch_list))
 
+    # Create an RD Pool
+    # Sample JSON for an RD pool -- see the REST API docs for their descriptions
+    # {
+    #     "ttl": 120,
+    #     "rdata": [
+    #         "4.5.6.7", "199.7.167.22", "1.2.3.4", "5.6.7.8"
+    #     ],
+    #     "profile": {
+    #         "@context": "http://schemas.ultradns.com/RDPool.jsonschema",
+    #         "description": "description",
+    #         "order": "ROUND_ROBIN"
+    #     }
+    # }
+
+    def _build_rd_rrset(self, rdata_info, ttl, owner_name):
+        rdata = []
+        for rr in rdata_info:
+            rdata.append(rr)
+        profile = {"@context": "http://schemas.ultradns.com/RDPool.jsonschema"}
+        profile["order"] = "ROUND_ROBIN"
+        profile["description"] = owner_name
+        rrset = {"ttl": ttl, "rdata": rdata, "profile": profile}
+        return rrset
+
+    def create_rd_pool(self, zone_name, owner_name, ttl, rdata_info):
+        """Creates a new RD Pool.
+
+        Arguments:
+        zone_name -- The zone that contains the RRSet.  The trailing dot is optional.
+        owner_name -- The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        ttl -- The updated TTL value for the RRSet.
+        rdata_info -- dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        """
+
+        rrset = self._build_rd_rrset(rdata_info, ttl, owner_name)
+        print (json.dumps(rrset))
+        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
+
+
+    # Update an RD Pool
+    def edit_rd_pool(self, zone_name, owner_name, ttl, rdata_info):
+        """Updates an existing RD Pool in the specified zone.
+        :param zone_name: The zone that contains the RRSet.  The trailing dot is optional.
+        :param owner_name: The owner name for the RRSet.
+                      If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                      If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        :param ttl: The updated TTL value for the RRSet.
+        :param rdata_info: dict of information about the records in the pool.
+                      The keys in the dict are the A and CNAME records that make up the pool.
+                      The values are the rdataInfo for each of the records
+        """
+        rrset = self._build_rd_rrset(rdata_info, ttl, owner_name)
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
+
+    def get_rd_pool(self, zone_name, owner_name):
+        return self.rest_api_connection.get("/v1/zones/" + zone_name + "/rrsets?q=kind:RD_POOLS")
+
     # Create an SB Pool
     # Sample JSON for an SB pool -- see the REST API docs for their descriptions
     # {
