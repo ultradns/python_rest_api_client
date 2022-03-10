@@ -189,6 +189,16 @@ class RestApiClient:
         """
         return self.rest_api_connection.get("/v1/zones/" + zone_name)
 
+    # get zone metadata v3
+    def get_zone_metadata_v3(self, zone_name):
+        """Returns the metadata for the specified zone.
+
+        Arguments:
+        zone_name -- The name of the zone being returned.
+
+        """
+        return self.rest_api_connection.get("/v3/zones/" + zone_name)
+
     # delete a zone
     def delete_zone(self, zone_name):
         """Deletes the specified zone.
