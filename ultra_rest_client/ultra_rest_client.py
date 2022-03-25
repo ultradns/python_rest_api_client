@@ -179,6 +179,31 @@ class RestApiClient:
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
+    # list zones for all user accounts using v3 url
+    def get_zones_v3(self, q=None, **kwargs):
+        """Returns a list of zones across all of the user's accounts.
+
+        Keyword Arguments:
+        q -- The search parameters, in a dict.  Valid keys are:
+             name - substring match of the zone name
+             zone_type - one of:
+                PRIMARY
+                SECONDARY
+                ALIAS
+        sort -- The sort column used to order the list. Valid values for the sort field are:
+                NAME
+                ACCOUNT_NAME
+                RECORD_COUNT
+                ZONE_TYPE
+        reverse -- Whether the list is ascending(False) or descending(True)
+        offset -- The position in the list for the first returned element(0 based)
+        limit -- The maximum number of rows to be returned.
+
+        """
+        uri = "/v3/zones"
+        params = build_params(q, kwargs)
+        return self.rest_api_connection.get(uri, params)
+
     # get zone metadata
     def get_zone_metadata(self, zone_name):
         """Returns the metadata for the specified zone.
