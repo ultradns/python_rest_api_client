@@ -196,7 +196,6 @@ class RestApiClient:
                 RECORD_COUNT
                 ZONE_TYPE
         reverse -- Whether the list is ascending(False) or descending(True)
-        offset -- The position in the list for the first returned element(0 based)
         limit -- The maximum number of rows to be returned.
 
         """
