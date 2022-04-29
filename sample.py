@@ -27,6 +27,14 @@ print 'status %s' % c.status()
 account_details = c.get_account_details()
 account_name = account_details[u'accounts'][0][u'accountName']
 print 'account name %s' % account_name
+print 'get zone metadata %s' % c.get_zone_metadata_v3("mjoy-example.com.")
+print 'get first 5 primary zones with mjoy: %s' % c.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"name":"mjoy", "zone_type":"PRIMARY"})
+print '\n'
+print 'get first 5 secondary zones: %s' % c.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"zone_type":"SECONDARY"})
+print '\n'
+print 'get all zones with 20 zones per page. First page is returned by default: %s' % c.get_zones_v3(limit=20, q={"zone_status":"ALL"})
+print '\n'
+print 'get next page of zones with 20 zones per page. Cursor returned by above request is used: %s' % c.get_zones_v3(limit=20, cursor='MDAwMC10YW52aS1zaWduZWQuY29tLjpORVhU', q={"zone_status":"ALL"})
 print 'create primary zone result %s' % c.create_primary_zone(account_name, "foo.invalid.")
 print 'get zone metadata %s' % c.get_zone_metadata("foo.invalid.")
 print 'delete zone %s ' % c.delete_zone("foo.invalid.")
