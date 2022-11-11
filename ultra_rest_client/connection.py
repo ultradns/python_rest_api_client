@@ -7,6 +7,7 @@ __author__ = 'Jon Bodner'
 
 # store the URL and the access/refresh tokens as state
 import requests
+from .about import get_client_user_agent
 
 class AuthError(Exception):
     def __init__(self, message):
@@ -67,7 +68,8 @@ class RestApiConnection:
 
     def _build_headers(self, content_type):
         result = {"Accept": "application/json",
-                  "Authorization": "Bearer " + self.access_token}
+                  "Authorization": "Bearer " + self.access_token,
+                  "User-Agent": get_client_user_agent()}
         if content_type != "":
             result["Content-type"] = content_type
         return result
