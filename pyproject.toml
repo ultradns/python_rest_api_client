@@ -7,8 +7,9 @@ name = "ultra-rest-client"
 dynamic = ["version"]
 description = "A sample Python client for communicating with the UltraDNS REST API"
 readme = "README.md"
+license-files = { paths = ["LICENSE"] }
 authors = [
-    { name = "Jon Bodner", email = "mervin.joy@neustarsecurityservices.com" },
+    { name = "ultradns", email = "ultrassp-oss.neustarsecurityservices.com@neustarsecurityservices.com" },
 ]
 keywords = [
     "ultra_rest_client",
