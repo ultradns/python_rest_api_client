@@ -14,6 +14,10 @@ jobs:
       - 
         name: Setup Python environment
         uses: actions/setup-python@v4
+      -
+        name: Install Dependencies
+        run: |
+          pip install requests
       - 
         name: Running acceptace test
         run: python test.py
@@ -36,8 +40,10 @@ jobs:
         name: Create Release Info
         run: echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
       -
-        name: Installing hatch
-        run: pip install hatch
+        name: Installing Dependencies
+        run: |
+          pip install requests
+          pip install hatch
       - 
         name: Versioning the build
         run: hatch version ${{ env.RELEASE_VERSION }}

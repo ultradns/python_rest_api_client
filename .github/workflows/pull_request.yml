@@ -14,6 +14,10 @@ jobs:
       - 
         name: Setup Python environment
         uses: actions/setup-python@v4
+      -
+        name: Install Dependencies
+        run: |
+          pip install requests
       - 
         name: Running acceptace test
         run: python test.py
