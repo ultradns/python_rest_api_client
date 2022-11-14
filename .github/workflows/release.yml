@@ -1,0 +1,56 @@
+name: Release_Workflow
+on: 
+  push:
+    branches:
+      - master
+jobs:
+  Code_Analysis_Job:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - 
+        name: Check out repository code
+        uses: actions/checkout@v3
+      - 
+        name: Setup Python environment
+        uses: actions/setup-python@v4
+      -
+        name: Install Dependencies
+        run: pip install requests
+      - 
+        name: Running acceptace test
+        run: python test.py
+        env:
+          ULTRADNS_UNIT_TEST_USERNAME: ${{ secrets.ULTRADNS_UNIT_TEST_USERNAME }}
+          ULTRADNS_UNIT_TEST_PASSWORD: ${{ secrets.ULTRADNS_UNIT_TEST_PASSWORD }}
+          ULTRADNS_UNIT_TEST_HOST_URL: ${{ secrets.ULTRADNS_UNIT_TEST_HOST_URL }}
+  Release_Job:
+    runs-on: ubuntu-latest
+    needs: Code_Analysis_Job
+    environment: prod
+    steps:
+      - 
+        name: Check out repository code
+        uses: actions/checkout@v3
+      - 
+        name: Setup Python environment
+        uses: actions/setup-python@v4
+      - 
+        name: Create Release Info
+        run: echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
+      -
+        name: Installing Dependencies
+        run: |
+          pip install requests
+          pip install hatch
+      - 
+        name: Versioning the build
+        run: hatch version ${{ env.RELEASE_VERSION }}
+      - 
+        name: Creating python Package
+        run: hatch build
+      - 
+        name: Publishing python Package
+        uses: pypa/gh-action-pypi-publish@v1.5.1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

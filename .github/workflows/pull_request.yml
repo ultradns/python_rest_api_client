@@ -1,0 +1,26 @@
+name: Code_Analysis_Workflow
+on: 
+  pull_request:
+    branches:
+      - master
+jobs:
+  Code_Analysis_Job:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - 
+        name: Check out repository code
+        uses: actions/checkout@v3
+      - 
+        name: Setup Python environment
+        uses: actions/setup-python@v4
+      -
+        name: Install Dependencies
+        run: pip install requests
+      - 
+        name: Running acceptace test
+        run: python test.py
+        env:
+          ULTRADNS_UNIT_TEST_USERNAME: ${{ secrets.ULTRADNS_UNIT_TEST_USERNAME }}
+          ULTRADNS_UNIT_TEST_PASSWORD: ${{ secrets.ULTRADNS_UNIT_TEST_PASSWORD }}
+          ULTRADNS_UNIT_TEST_HOST_URL: ${{ secrets.ULTRADNS_UNIT_TEST_HOST_URL }}
