@@ -9,7 +9,7 @@ description = "A sample Python client for communicating with the UltraDNS REST A
 readme = "README.md"
 license-files = { paths = ["LICENSE"] }
 authors = [
-    { name = "ultradns", email = "ultrassp-oss.neustarsecurityservices.com@neustarsecurityservices.com" },
+    { name = "ultradns", email = "ultrassp-oss@neustarsecurityservices.com" },
 ]
 keywords = [
     "ultra_rest_client",
