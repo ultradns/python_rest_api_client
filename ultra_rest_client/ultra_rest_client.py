@@ -6,7 +6,7 @@
 __author__ = 'Jon Bodner'
 from .connection import RestApiConnection
 import json
-
+import time
 
 class RestApiClient:
     def __init__(self, username, password, use_http=False, host="restapi.ultradns.com"):
@@ -735,6 +735,26 @@ class RestApiClient:
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
         return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
 
+    # export zone in bind format
+    def export_zone(self, zone_name):
+        """Returns a zone file in bind format
+    
+        Arguments:
+        zone_name -- The name of the zone being returned. A single zone as a string.
+    
+        """
+        zonelist = [zone_name]
+        zonejson=json.dumps({'zoneNames': zonelist})
+        status = self.rest_api_connection.post("/v3/zones/export", zonejson)
+        taskId = status.get('task_id')
+        while True:
+            task_status = self.rest_api_connection.get("/v1/tasks/"+taskId)
+            if task_status['code'] != 'IN_PROCESS':
+              break
+            time.sleep(1)
+        result=self.rest_api_connection.get("/v1/tasks/"+taskId+"/result")
+        self.clear_task(taskId)
+        return result
 
 def build_params(q, args):
     params = {}

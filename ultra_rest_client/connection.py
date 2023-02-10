@@ -105,6 +105,9 @@ class RestApiConnection:
         # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
         if r1.status_code == requests.codes.NO_CONTENT:
             return {}
+        # if the content-type is text/plain just return the text
+        if r1.headers['Content-Type'] == 'text/plain':
+            return r1.text
         json_body = r1.json()
         # if this is a background task, add the task id to the body
         if r1.status_code == requests.codes.ACCEPTED:
