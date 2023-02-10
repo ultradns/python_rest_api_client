@@ -80,5 +80,8 @@ print('all task status: %s ' % c.get_all_tasks())
 #delete task status
 print('delete task status: %s ' % c.clear_task(result['task_id']))
 
+#export zonefile in bind format
+print('export zone: %s ' % c.export_zone('sample.client.me.'))
+
 #delete the zone
 print('delete zone: %s ' % c.delete_zone('sample.client.me.'))

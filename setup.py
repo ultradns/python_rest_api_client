@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='ultra_rest_client',
-    version='0.2.1',
+    version='0.2.2',
     description='A sample Python client for communicating with the UltraDNS REST API',
     url='https://github.com/ultradns/python_rest_api_client',
     author='Jon Bodner',
