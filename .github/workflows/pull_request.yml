@@ -1,8 +1,6 @@
 name: Code_Analysis_Workflow
 on: 
-  pull_request:
-    branches:
-      - master
+  push:
 jobs:
   Code_Analysis_Job:
     runs-on: ubuntu-latest
