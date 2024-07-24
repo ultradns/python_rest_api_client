@@ -108,6 +108,9 @@ class RestApiConnection:
         # if the content-type is text/plain just return the text
         if r1.headers['Content-Type'] == 'text/plain':
             return r1.text
+        # Return the bytes. Zone exports produce zip files when done in batch.
+        if resp.headers['Content-Type'] == 'application/zip':
+            return resp.content
         json_body = r1.json()
         # if this is a background task, add the task id to the body
         if r1.status_code == requests.codes.ACCEPTED:
