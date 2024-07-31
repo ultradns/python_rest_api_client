@@ -105,16 +105,22 @@ class RestApiConnection:
         # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
         if r1.status_code == requests.codes.NO_CONTENT:
             return {}
+        # some endpoints have no content-type header
+        if 'content-type' not in r1.headers:
+            r1.headers['content-type'] = 'none'
         # if the content-type is text/plain just return the text
-        if r1.headers['Content-Type'] == 'text/plain':
+        if r1.headers['content-type'] == 'text/plain':
             return r1.text
         # Return the bytes. Zone exports produce zip files when done in batch.
-        if r1.headers['Content-Type'] == 'application/zip':
+        if r1.headers['content-type'] == 'application/zip':
             return r1.content
         json_body = r1.json()
-        # if this is a background task, add the task id to the body
+        # if this is a background task, add the task id (or location) to the body
         if r1.status_code == requests.codes.ACCEPTED:
-            json_body['task_id'] = r1.headers['x-task-id']
+            if 'x-task-id' in r1.headers:
+                json_body['task_id'] = r1.headers['x-task-id']
+            if 'location' in r1.headers:
+                json_body['location'] = r1.headers['location']
         if type(json_body) is dict:
             if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
                 self._refresh()
