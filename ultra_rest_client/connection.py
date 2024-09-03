@@ -11,32 +11,30 @@ from .about import get_client_user_agent
 
 class AuthError(Exception):
     def __init__(self, message):
-        self.message = message
+        super().__init__(message)
 
     def __str__(self):
-        return repr(self.message)
+        return str(self.message)
 
 
 class RestError(Exception):
     def __init__(self, message):
-        self.message = message
+        super().__init__(message)
 
     def __str__(self):
-        return repr(self.message)
+        return str(self.message)
 
 
 class RestApiConnection:
-    def __init__(self, use_http=False, host="restapi.ultradns.com"):
+    def __init__(self, use_http=False, host="restapi.ultradns.com", access_token: str = "", refresh_token: str = ""):
         self.use_http = use_http
         self.host = host
-        self.access_token = ""
-        self.refresh_token = ""
+        self.access_token = access_token
+        self.refresh_token = refresh_token
 
     def _get_connection(self):
-        if self.use_http:
-            return "http://"+ self.host
-        else:
-            return "https://"+ self.host
+        protocol = "http://" if self.use_http else "https://"
+        return protocol + self.host
 
     # Authentication
     # We need the ability to take in a username and password and get
@@ -44,50 +42,56 @@ class RestApiConnection:
     # to an invalid auth token, refresh must be automatically invoked, the
     # new auth token and refresh token stored, and the request tried again
     # with the new auth token.
+
     def auth(self, username, password):
-        h1 = self._get_connection()
-        payload = {"grant_type":"password", "username":username, "password":password}
-        r1 = requests.post(h1+"/v1/authorization/token",data=payload)
-        if r1.status_code == requests.codes.OK:
-            json_body = r1.json()
-            self.access_token = json_body[u'accessToken']
-            self.refresh_token = json_body[u'refreshToken']
+        host = self._get_connection()
+        payload = {
+            "grant_type":"password",
+            "username":username,
+            "password":password
+        }
+        response = requests.post(f"{host}/v1/authorization/token", data=payload)
+        if response.status_code == requests.codes.OK:
+            json_body = response.json()
+            self.access_token = json_body.get('accessToken')
+            self.refresh_token = json_body.get('refreshToken')
         else:
-            raise AuthError(r1.json())
+            raise AuthError(response.json())
 
     def _refresh(self):
-        h1 = self._get_connection()
-        payload = {"grant_type":"refresh_token","refresh_token":self.refresh_token}
-        r1 = requests.post(h1+"/v1/authorization/token", data=payload)
-        if r1.status_code == requests.codes.OK:
-            json_body = r1.json()
-            self.access_token = json_body[u'accessToken']
-            self.refresh_token = json_body[u'refreshToken']
+        host = self._get_connection()
+        payload = {
+            "grant_type":"refresh_token",
+            "refresh_token":self.refresh_token
+        }
+        response = requests.post(f"{host}/v1/authorization/token", data=payload)
+        if response.status_code == requests.codes.OK:
+            json_body = response.json()
+            self.access_token = json_body.get('accessToken')
+            self.refresh_token = json_body.get('refreshToken')
         else:
-            raise AuthError(r1.json())
+            raise AuthError(response.json())
 
     def _build_headers(self, content_type):
-        result = {"Accept": "application/json",
-                  "Authorization": "Bearer " + self.access_token,
-                  "User-Agent": get_client_user_agent()}
-        if content_type != "":
-            result["Content-type"] = content_type
-        return result
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.access_token}",
+            "User-Agent": get_client_user_agent()
+        }
+        if content_type:
+            headers["Content-Type"] = content_type
+        return headers
 
     def get(self, uri, params=None):
-        if params is None:
-            params = {}
+        params = params or {}
         return self._do_call(uri, "GET", params=params)
 
     def post_multi_part(self, uri, files):
         #use empty string for content type so we don't set it
-        return self._do_call(uri, "POST", files=files, content_type="")
+        return self._do_call(uri, "POST", files=files, content_type=None)
 
     def post(self, uri, json=None):
-        if json is not None:
-            return self._do_call(uri, "POST", body=json)
-        else:
-            return self._do_call(uri, "POST")
+        return self._do_call(uri, "POST", body=json) if json is not None else self._do_call(uri, "POST")
 
     def put(self, uri, json):
         return self._do_call(uri, "PUT", body=json)
@@ -98,27 +102,29 @@ class RestApiConnection:
     def delete(self, uri):
         return self._do_call(uri, "DELETE")
 
-    def _do_call(self, uri, method, params=None, body=None, retry=True, files=None, content_type = "application/json"):
-        h1 = self._get_connection()
-        r1 = requests.request(method, h1+uri, params=params, data=body, headers=self._build_headers(content_type), files=files)
-        # bad access token = status 400,
-        # body = {"errorCode":60001,"errorMessage":"invalid_grant:token not found, expired or invalid"}
-        if r1.status_code == requests.codes.NO_CONTENT:
+    def _do_call(self, uri, method, params=None, body=None, retry=True, files=None, content_type="application/json"):
+        host = self._get_connection()
+        response = requests.request(
+            method,
+            host + uri,
+            params=params,
+            data=body,
+            headers=self._build_headers(content_type),
+            files=files
+        )
+        if response.status_code == requests.codes.NO_CONTENT:
             return {}
         # if the content-type is text/plain just return the text
-        if r1.headers['Content-Type'] == 'text/plain':
-            return r1.text
-        json_body = r1.json()
+        if response.headers.get('Content-Type') == 'text/plain':
+            return response.text
+
+        json_body = response.json()
         # if this is a background task, add the task id to the body
-        if r1.status_code == requests.codes.ACCEPTED:
-            json_body['task_id'] = r1.headers['x-task-id']
-        if type(json_body) is dict:
-            if retry and u'errorCode' in json_body and json_body[u'errorCode'] == 60001:
-                self._refresh()
-                json_body = self._do_call(uri, method, params, body, False)
-            #disabling error raising for now, because it only happens for batch
-            #because all other errors are returned in a list, not in a dict
-            #should have been raising errors for those, too, but haven't been
-            #elif r1.status_code >= requests.codes.BAD_REQUEST:
-            #    raise RestError(json_body)
+        if response.status_code == requests.codes.ACCEPTED:
+            json_body['task_id'] = response.headers.get('x-task-id')
+
+        if isinstance(json_body, dict) and retry and json_body.get('errorCode') == 60001:
+            self._refresh()
+            return self._do_call(uri, method, params, body, False)
+
         return json_body
