@@ -33,8 +33,11 @@ class RestApiConnection:
         self.refresh_token = refresh_token
 
     def _get_connection(self):
-        protocol = "http://" if self.use_http else "https://"
-        return protocol + self.host
+        if self.host.startswith("https://") or self.host.startswith("http://"):
+            return self.host
+        else:
+            protocol = "http://" if self.use_http else "https://"
+            return protocol + self.host
 
     # Authentication
     # We need the ability to take in a username and password and get
