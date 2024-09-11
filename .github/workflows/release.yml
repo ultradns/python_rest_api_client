@@ -36,6 +36,9 @@ jobs:
         name: Setup Python environment
         uses: actions/setup-python@v4
       - 
+        name: Create Release Info
+        run: echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
+      -
         name: Installing Dependencies
         run: |
           pip install requests
