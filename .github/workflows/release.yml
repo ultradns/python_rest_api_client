@@ -10,10 +10,10 @@ jobs:
     steps:
       - 
         name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - 
         name: Setup Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
       -
         name: Install Dependencies
         run: pip install requests
@@ -37,7 +37,13 @@ jobs:
         uses: actions/setup-python@v4
       - 
         name: Create Release Info
-        run: echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
+        run: |
+          SDK_VERSION=$(cat .plugin-version)
+          CURRENT_TIME=$(date +'%Y%m%d%H%M%S')
+          COMMIT_ID=$(git rev-parse --short "$GITHUB_SHA")
+          OLD_RELEASE_VERSION=$(git ls-remote --tags | cut -d/ -f3- | cut -d- -f1 | tail -1)
+          if [ "$OLD_RELEASE_VERSION" = "$SDK_VERSION" ]; then echo "Release version not incremented"; exit 1; fi
+          echo "RELEASE_VERSION=${SDK_VERSION}-${CURRENT_TIME}-${COMMIT_ID}" >> $GITHUB_ENV
       -
         name: Installing Dependencies
         run: |
@@ -51,6 +57,6 @@ jobs:
         run: hatch build
       - 
         name: Publishing python Package
-        uses: pypa/gh-action-pypi-publish@v1.5.1
+        uses: pypa/gh-action-pypi-publish@v1.10.1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
