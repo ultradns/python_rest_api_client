@@ -36,15 +36,6 @@ jobs:
         name: Setup Python environment
         uses: actions/setup-python@v4
       - 
-        name: Create Release Info
-        run: |
-          SDK_VERSION=$(cat .plugin-version)
-          CURRENT_TIME=$(date +'%Y%m%d%H%M%S')
-          COMMIT_ID=$(git rev-parse --short "$GITHUB_SHA")
-          OLD_RELEASE_VERSION=$(git ls-remote --tags | cut -d/ -f3- | cut -d- -f1 | tail -1)
-          if [ "$OLD_RELEASE_VERSION" = "$SDK_VERSION" ]; then echo "Release version not incremented"; exit 1; fi
-          echo "RELEASE_VERSION=${SDK_VERSION}-${CURRENT_TIME}-${COMMIT_ID}" >> $GITHUB_ENV
-      -
         name: Installing Dependencies
         run: |
           pip install requests
