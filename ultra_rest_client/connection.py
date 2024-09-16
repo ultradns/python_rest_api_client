@@ -26,7 +26,7 @@ class RestError(Exception):
 
 
 class RestApiConnection:
-    def __init__(self, use_http=False, host="restapi.ultradns.com", access_token: str = "", refresh_token: str = ""):
+    def __init__(self, use_http=False, host="api.ultradns.com", access_token: str = "", refresh_token: str = ""):
         self.use_http = use_http
         self.host = host
         self.access_token = access_token
