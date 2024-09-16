@@ -117,14 +117,27 @@ class RestApiConnection:
         )
         if response.status_code == requests.codes.NO_CONTENT:
             return {}
+
+        # some endpoints have no content-type header
+        if 'content-type' not in response.headers:
+            response.headers['content-type'] = 'none'
+
         # if the content-type is text/plain just return the text
-        if response.headers.get('Content-Type') == 'text/plain':
+        if response.headers.get('content-type') == 'text/plain':
             return response.text
 
+        # Return the bytes. Zone exports produce zip files when done in batch.
+        if response.headers.get('content-type') == 'application/zip':
+            return response.content
+
         json_body = response.json()
-        # if this is a background task, add the task id to the body
+        # if this is a background task, add the task id (or location) to the body
         if response.status_code == requests.codes.ACCEPTED:
             json_body['task_id'] = response.headers.get('x-task-id')
+            if 'x-task-id' in response.headers:
+                json_body['task_id'] = response.headers['x-task-id']
+            if 'location' in response.headers:
+                json_body['location'] = response.headers['location']
 
         if isinstance(json_body, dict) and retry and json_body.get('errorCode') == 60001:
             self._refresh()
