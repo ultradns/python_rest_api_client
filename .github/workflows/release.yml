@@ -5,15 +5,16 @@ on:
       - master
 jobs:
   Code_Analysis_Job:
+    if: ${{ ! github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     environment: test
     steps:
       - 
         name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - 
         name: Setup Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
       -
         name: Install Dependencies
         run: pip install requests
@@ -51,6 +52,6 @@ jobs:
         run: hatch build
       - 
         name: Publishing python Package
-        uses: pypa/gh-action-pypi-publish@v1.5.1
+        uses: pypa/gh-action-pypi-publish@v1.10.1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

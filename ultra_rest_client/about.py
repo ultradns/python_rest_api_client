@@ -1,5 +1,5 @@
-__version__="0.0.0"
-__prefix__="udns-python-rest-client-"
+VERSION = "2.2.0"
+PREFIX = "udns-python-rest-client-"
 
-def get_client_user_agent() :
-    return __prefix__+__version__
+def get_client_user_agent():
+    return f"{PREFIX}{VERSION}"

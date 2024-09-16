@@ -9,20 +9,34 @@ import json
 import time
 
 class RestApiClient:
-    def __init__(self, username, password, use_http=False, host="restapi.ultradns.com"):
+    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.test.ultradns.net"):
         """Initialize a Rest API Client.
 
         Arguments:
-        username -- The username of the user
-        password -- The password of the user
+        bu (str) -- Either username or bearer token based on `use_token` flag.
+        pr (str, optional) -- Either password or refresh token based on `use_token` flag. Defaults to None.
+        use_token (bool, optional) -- If True, treats `bu` as bearer token and `pr` as refresh token. Defaults to False.
 
         Keyword Arguments:
-        use_http -- For internal testing purposes only, lets developers use http instead of https.
-        host -- Allows you to point to a server other than the production server.
+        use_http (bool, optional) -- For internal testing purposes only, lets developers use http instead of https.
+        host (str) -- Allows you to point to a server other than the production server.
 
+        Raises:
+        ValueError -- If `pr` is not provided when `use_token` is True.
         """
-        self.rest_api_connection = RestApiConnection(use_http, host)
-        self.rest_api_connection.auth(username, password)
+
+        if use_token:
+            self.access_token = bu
+            self.refresh_token = pr
+            self.rest_api_connection = RestApiConnection(use_http, host, bu, pr)
+            if not self.refresh_token:
+                print(
+                    "Warning: Passing a Bearer token with no refresh token means the client state will expire after an hour.")
+        else:
+            if not pr:
+                raise ValueError("Password is required when providing a username.")
+            self.rest_api_connection = RestApiConnection(use_http, host)
+            self.rest_api_connection.auth(bu, pr)
 
     # Zones
     # create a primary zone
@@ -34,9 +48,17 @@ class RestApiClient:
         zone_name -- The name of the zone.  It must be unique.
 
         """
-        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
-        primary_zone_info = {"forceImport": True, "createType": "NEW"}
-        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
+        zone_data = {
+            "properties": {
+                "name": zone_name,
+                "accountName": account_name,
+                "type": "PRIMARY"
+            },
+            "primaryCreateInfo": {
+                "forceImport": True,
+                "createType": "NEW"
+            }
+        }
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
     # create primary zone by file upload
@@ -49,11 +71,21 @@ class RestApiClient:
         bind_file -- The file to upload.
 
         """
-        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
-        primary_zone_info = {"forceImport": True, "createType": "UPLOAD"}
-        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
-        files = {'zone': ('', json.dumps(zone_data), 'application/json'),
-                 'file': ('file', open(bind_file, 'rb'), 'application/octet-stream')}
+        zone_data = {
+            "properties": {
+                "name": zone_name,
+                "accountName": account_name,
+                "type": "PRIMARY"
+            },
+            "primaryCreateInfo": {
+                "forceImport": True,
+                "createType": "UPLOAD"
+            }
+        }
+        files = {
+            'zone': ('', json.dumps(zone_data), 'application/json'),
+            'file': ('file', open(bind_file, 'rb'), 'application/octet-stream')
+        }
         return self.rest_api_connection.post_multi_part("/v1/zones", files)
 
     # create a primary zone using axfr
@@ -71,13 +103,24 @@ class RestApiClient:
         key_value -- TSIG key secret.
 
         """
-        zone_properties = {"name": zone_name, "accountName": account_name, "type": "PRIMARY"}
-        if tsig_key is not None and key_value is not None:
-            name_server_info = {"ip": master, "tsigKey": tsig_key, "tsigKeyValue": key_value}
-        else:
-            name_server_info = {"ip": master}
-        primary_zone_info = {"forceImport": True, "createType": "TRANSFER", "nameServer": name_server_info}
-        zone_data = {"properties": zone_properties, "primaryCreateInfo": primary_zone_info}
+        zone_properties = {
+            "name": zone_name,
+            "accountName": account_name,
+            "type": "PRIMARY"
+        }
+        name_server_info = {"ip": master}
+        if tsig_key and key_value:
+            name_server_info.update({"tsigKey": tsig_key, "tsigKeyValue": key_value})
+
+        primary_zone_info = {
+            "forceImport": True,
+            "createType": "TRANSFER",
+            "nameServer": name_server_info
+        }
+        zone_data = {
+            "properties": zone_properties,
+            "primaryCreateInfo": primary_zone_info
+        }
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
     # create a secondary zone
@@ -95,15 +138,27 @@ class RestApiClient:
         key_value -- TSIG key secret.
 
         """
-        zone_properties = {"name": zone_name, "accountName": account_name, "type": "SECONDARY"}
-        if tsig_key is not None and key_value is not None:
-            name_server_info = {"ip": master, "tsigKey": tsig_key, "tsigKeyValue": key_value}
-        else:
-            name_server_info = {"ip": master}
-        name_server_ip_1 = {"nameServerIp1": name_server_info}
-        name_server_ip_list = {"nameServerIpList": name_server_ip_1}
-        secondary_zone_info = {"primaryNameServers": name_server_ip_list}
-        zone_data = {"properties": zone_properties, "secondaryCreateInfo": secondary_zone_info}
+        zone_properties = {
+            "name": zone_name,
+            "accountName": account_name,
+            "type": "SECONDARY"
+        }
+        name_server_info = {"ip": master}
+        if tsig_key and key_value:
+            name_server_info.update({"tsigKey": tsig_key, "tsigKeyValue": key_value})
+
+        name_server_ip_list = {
+            "nameServerIpList": {
+                "nameServerIp1": name_server_info
+            }
+        }
+        secondary_zone_info = {
+            "primaryNameServers": name_server_ip_list
+        }
+        zone_data = {
+            "properties": zone_properties,
+            "secondaryCreateInfo": secondary_zone_info
+        }
         return self.rest_api_connection.post("/v1/zones", json.dumps(zone_data))
 
     # force zone axfr
@@ -114,7 +169,7 @@ class RestApiClient:
         zone_name -- The zone name.  The trailing dot is optional.
 
         """
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/transfer")
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/transfer")
 
     # convert secondary
     def convert_zone(self, zone_name):
@@ -124,7 +179,7 @@ class RestApiClient:
         zone_name -- The zone name. The trailing dot is optional.
 
         """
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/convert")
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/convert")
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
@@ -150,7 +205,7 @@ class RestApiClient:
         limit -- The maximum number of rows to be returned.
 
         """
-        uri = "/v1/accounts/" + account_name + "/zones"
+        uri = f"/v1/accounts/{account_name}/zones"
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
@@ -211,7 +266,7 @@ class RestApiClient:
         zone_name -- The name of the zone being returned.
 
         """
-        return self.rest_api_connection.get("/v1/zones/" + zone_name)
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}")
 
     # get zone metadata v3
     def get_zone_metadata_v3(self, zone_name):
@@ -221,7 +276,7 @@ class RestApiClient:
         zone_name -- The name of the zone being returned.
 
         """
-        return self.rest_api_connection.get("/v3/zones/" + zone_name)
+        return self.rest_api_connection.get(f"/v3/zones/{zone_name}")
 
     # delete a zone
     def delete_zone(self, zone_name):
@@ -231,7 +286,8 @@ class RestApiClient:
         zone_name -- The name of the zone being deleted.
 
         """
-        return self.rest_api_connection.delete("/v1/zones/" + zone_name)
+        return self.rest_api_connection.delete(f"/v1/zones/{zone_name}")
+
 
     # update secondary zone name servers (PATCH)
     def edit_secondary_name_server(self, zone_name, primary=None, backup=None, second_backup=None):
@@ -246,17 +302,17 @@ class RestApiClient:
         second_backup -- The second backup name server.
 
         """
-        name_server_info = {}
-        if primary is not None:
-            name_server_info['nameServerIp1'] = {'ip':primary}
-        if backup is not None:
-            name_server_info['nameServerIp2'] = {'ip':backup}
-        if second_backup is not None:
-            name_server_info['nameServerIp3'] = {'ip':second_backup}
-        name_server_ip_list = {"nameServerIpList": name_server_info}
-        secondary_zone_info = {"primaryNameServers": name_server_ip_list}
-        zone_data = {"secondaryCreateInfo": secondary_zone_info}
-        return self.rest_api_connection.patch("/v1/zones/" + zone_name, json.dumps(zone_data))
+        name_server_info = {
+            f'nameServerIp{i+1}': {'ip': ip} for i, ip in enumerate([primary, backup, second_backup]) if ip is not None
+        }
+        zone_data = {
+            "secondaryCreateInfo": {
+                "primaryNameServers": {
+                    "nameServerIpList": name_server_info
+                }
+            }
+        }
+        return self.rest_api_connection.patch(f"/v1/zones/{zone_name}", json.dumps(zone_data))
 
     # RRSets
     # list rrsets for a zone
@@ -280,7 +336,7 @@ class RestApiClient:
         limit -- The maximum number of rows to be returned.
 
         """
-        uri = "/v1/zones/" + zone_name + "/rrsets"
+        uri = f"/v1/zones/{zone_name}/rrsets"
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
@@ -308,7 +364,7 @@ class RestApiClient:
         limit -- The maximum number of rows to be returned.
 
         """
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype
+        uri = f"/v1/zones/{zone_name}/rrsets/{rtype}"
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
@@ -337,7 +393,7 @@ class RestApiClient:
         limit -- The maximum number of rows to be returned.
 
         """
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
+        uri = f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}"
         params = build_params(q, kwargs)
         return self.rest_api_connection.get(uri, params)
 
@@ -358,10 +414,10 @@ class RestApiClient:
                  If there are multiple resource records  in this RRSet, pass in a list of strings.
 
         """
-        if type(rdata) is not list:
+        if not isinstance(rdata, list):
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name, json.dumps(rrset))
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}", json.dumps(rrset))
 
     # edit an rrset (PUT)
     def edit_rrset(self, zone_name, rtype, owner_name, ttl, rdata, profile=None):
@@ -381,12 +437,12 @@ class RestApiClient:
         profile -- The profile info if this is updating a resource pool
 
         """
-        if type(rdata) is not list:
+        if not isinstance(rdata, list):
             rdata = [rdata]
         rrset = {"ttl": ttl, "rdata": rdata}
         if profile:
             rrset["profile"] = profile
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
+        uri = f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}"
         return self.rest_api_connection.put(uri, json.dumps(rrset))
 
     # edit an rrset's rdata (PATCH)
@@ -406,14 +462,14 @@ class RestApiClient:
         profile -- The profile info if this is updating a resource pool
 
         """
-        if type(rdata) is not list:
+        if not isinstance(rdata, list):
             rdata = [rdata]
         rrset = {"rdata": rdata}
         method = "patch"
         if profile:
             rrset["profile"] = profile
             method = "put"
-        uri = "/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name
+        uri = f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}"
         return getattr(self.rest_api_connection, method)(uri,json.dumps(rrset))
 
     # delete an rrset
@@ -429,7 +485,7 @@ class RestApiClient:
                       If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
 
         """
-        return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/rrsets/" + rtype + "/" + owner_name)
+        return self.rest_api_connection.delete(f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}")
 
     # Web Forwards
     # get web forwards
@@ -441,7 +497,7 @@ class RestApiClient:
                              the system-generated guid for each object.
 
         """
-        return self.rest_api_connection.get("/v1/zones/" + zone_name + "/webforwards")
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/webforwards")
 
     # create web forward
     def create_web_forward(self, zone_name, request_to, redirect_to, forward_type):
@@ -458,8 +514,13 @@ class RestApiClient:
                                    HTTP_307_REDIRECT
 
         """
-        web_forward = {"requestTo": request_to, "defaultRedirectTo": redirect_to, "defaultForwardType": forward_type}
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/webforwards", json.dumps(web_forward))
+        web_forward = {
+            "requestTo": request_to,
+            "defaultRedirectTo": redirect_to,
+            "defaultForwardType": forward_type
+        }
+        uri = f"/v1/zones/{zone_name}/webforwards"
+        return self.rest_api_connection.post(uri, json.dumps(web_forward))
 
     # delete web forward
     def delete_web_forward(self, zone_name, guid):
@@ -470,7 +531,7 @@ class RestApiClient:
         guid -- The system-generated unique id for the web forward.
 
         """
-        return self.rest_api_connection.delete("/v1/zones/" + zone_name + "/webforwards/" + guid)
+        return self.rest_api_connection.delete(f"/v1/zones/{zone_name}/webforwards/{guid}")
 
     # Accounts
     # get account details for user
@@ -495,10 +556,10 @@ class RestApiClient:
         return self.rest_api_connection.get("/v1/tasks")
 
     def get_task(self, task_id):
-        return self.rest_api_connection.get("/v1/tasks/"+task_id)
+        return self.rest_api_connection.get(f"/v1/tasks/{task_id}")
 
     def clear_task(self, task_id):
-        return self.rest_api_connection.delete("/v1/tasks/"+task_id)
+        return self.rest_api_connection.delete(f"/v1/tasks/{task_id}")
 
     # Batch
     def batch(self, batch_list):
@@ -569,17 +630,21 @@ class RestApiClient:
     # }
 
     def _build_sb_rrset(self, backup_record_list, pool_info, rdata_info, ttl):
-        rdata = []
-        rdata_info_list = []
-        for rr in rdata_info:
-            rdata.append(rr)
-            rdata_info_list.append(rdata_info[rr])
-        profile = {"@context": "http://schemas.ultradns.com/SBPool.jsonschema"}
+        rdata = list(rdata_info.keys())
+        rdata_info_list = list(rdata_info.values())
+
+        profile = {
+            "@context": "http://schemas.ultradns.com/SBPool.jsonschema",
+            "backupRecords": backup_record_list,
+            "rdataInfo": rdata_info_list
+        }
         for p in pool_info:
             profile[p] = pool_info[p]
-        profile["backupRecords"] = backup_record_list
-        profile["rdataInfo"] = rdata_info_list
-        rrset = {"ttl": ttl, "rdata": rdata, "profile": profile}
+        rrset = {
+            "ttl": ttl,
+            "rdata": rdata,
+            "profile": profile
+        }
         return rrset
 
     def create_sb_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record_list):
@@ -600,10 +665,9 @@ class RestApiClient:
                             rdata - the A or CNAME for the backup record
                             failoverDelay - the time to wait to fail over (optional, defaults to 0)
         """
-
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
-
+        endpoint = f"/v1/zones/{zone_name}/rrsets/A/{owner_name}"
+        return self.rest_api_connection.post(endpoint, json=rrset)
 
     # Update an SB Pool
     def edit_sb_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record_list):
@@ -623,20 +687,25 @@ class RestApiClient:
                             failoverDelay - the time to wait to fail over (optional, defaults to 0)
         """
         rrset = self._build_sb_rrset(backup_record_list, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
+        endpoint = f"/v1/zones/{zone_name}/rrsets/A/{owner_name}"
+        return self.rest_api_connection.put(endpoint, json=rrset)
 
     def _build_tc_rrset(self, backup_record, pool_info, rdata_info, ttl):
-        rdata = []
-        rdata_info_list = []
-        for rr in rdata_info:
-            rdata.append(rr)
-            rdata_info_list.append(rdata_info[rr])
-        profile = {"@context": "http://schemas.ultradns.com/TCPool.jsonschema"}
+        rdata = list(rdata_info.keys())
+        rdata_info_list = list(rdata_info.values())
+
+        profile = {
+            "@context": "http://schemas.ultradns.com/TCPool.jsonschema",
+            "backupRecord": backup_record,
+            "rdataInfo": rdata_info_list
+        }
         for p in pool_info:
             profile[p] = pool_info[p]
-        profile["backupRecord"] = backup_record
-        profile["rdataInfo"] = rdata_info_list
-        rrset = {"ttl": ttl, "rdata": rdata, "profile": profile}
+        rrset = {
+            "ttl": ttl,
+            "rdata": rdata,
+            "profile": profile
+        }
         return rrset
 
     # Create a TC Pool
@@ -712,8 +781,8 @@ class RestApiClient:
         """
 
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.post("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
-
+        endpoint = f"/v1/zones/{zone_name}/rrsets/A/{owner_name}"
+        return self.rest_api_connection.post(endpoint, json=rrset)
 
     # Update an SB Pool
     def edit_tc_pool(self, zone_name, owner_name, ttl, pool_info, rdata_info, backup_record):
@@ -733,7 +802,8 @@ class RestApiClient:
                             failoverDelay - the time to wait to fail over (optional, defaults to 0)
         """
         rrset = self._build_tc_rrset(backup_record, pool_info, rdata_info, ttl)
-        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/rrsets/A/" + owner_name, json.dumps(rrset))
+        endpoint = f"/v1/zones/{zone_name}/rrsets/A/{owner_name}"
+        return self.rest_api_connection.put(endpoint, json=rrset)
 
     # export zone in bind format
     def export_zone(self, zone_name):
@@ -743,25 +813,22 @@ class RestApiClient:
         zone_name -- The name of the zone being returned. A single zone as a string.
     
         """
-        zonelist = [zone_name]
-        zonejson=json.dumps({'zoneNames': zonelist})
-        status = self.rest_api_connection.post("/v3/zones/export", zonejson)
-        taskId = status.get('task_id')
+        zonejson = json.dumps({'zoneNames': [zone_name]})
+        status = self.rest_api_connection.post("/v3/zones/export", json=zonejson)
+        task_id = status.get('task_id')
+
         while True:
-            task_status = self.rest_api_connection.get("/v1/tasks/"+taskId)
+            task_status = self.rest_api_connection.get(f"/v1/tasks/{task_id}")
             if task_status['code'] != 'IN_PROCESS':
-              break
+                break
             time.sleep(1)
-        result=self.rest_api_connection.get("/v1/tasks/"+taskId+"/result")
-        self.clear_task(taskId)
+
+        result = self.rest_api_connection.get(f"/v1/tasks/{task_id}/result")
+        self.clear_task(task_id)
         return result
 
 def build_params(q, args):
-    params = {}
-    params.update(args)
-    if q is not None:
-        all = []
-        for k in q:
-            all.append("%s:%s" % (k, q[k]))
-        params['q']= ' '.join(all)
+    params = args.copy()
+    if q:
+        params['q'] = ' '.join(f"{k}:{v}" for k, v in q.items())
     return params

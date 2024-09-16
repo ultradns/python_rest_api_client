@@ -1,103 +1,105 @@
-# Copyright 2023 - Vercara. All rights reserved.
+# Copyright 2024 - Vercara. All rights reserved.
 # Vercara, the Vercara logo and related names and logos are registered
 # trademarks, service marks or tradenames of Vercara. All other
 # product names, company names, marks, logos and symbols may be trademarks
 # of their respective owners.
 __author__ = 'UltraDNS'
 
-import ultra_rest_client
+from ultra_rest_client import RestApiClient
 import sys
 import time
 
-if len(sys.argv) != 5 and len(sys.argv) != 3:
-    raise Exception("Expected use: python sample.py username password [use_http host:port]")
+if len(sys.argv) != 6 and len(sys.argv) != 3:
+    raise Exception("Expected use: python sample.py username password [use_token use_http host:port]")
 
 username = sys.argv[1]
 password = sys.argv[2]
 use_http = 'False'
+use_token = 'False'
 domain = 'restapi.ultradns.com'
 
-if len(sys.argv) == 5:
-    use_http = sys.argv[3]
-    domain = sys.argv[4]
+if len(sys.argv) == 6:
+    use_token = sys.argv[3]
+    use_http = sys.argv[4]
+    domain = sys.argv[5]
 
-c = ultra_rest_client.RestApiClient(username, password, 'True' == use_http, domain)
-print 'version %s' % c.version()
-print 'status %s' % c.status()
-account_details = c.get_account_details()
-account_name = account_details[u'accounts'][0][u'accountName']
-print 'account name %s' % account_name
-print 'get zone metadata %s' % c.get_zone_metadata_v3("mjoy-example.com.")
-print 'get first 5 primary zones with mjoy: %s' % c.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"name":"mjoy", "zone_type":"PRIMARY"})
-print '\n'
-print 'get first 5 secondary zones: %s' % c.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"zone_type":"SECONDARY"})
-print '\n'
-print 'get all zones with 20 zones per page. First page is returned by default: %s' % c.get_zones_v3(limit=20, q={"zone_status":"ALL"})
-print '\n'
-print 'get next page of zones with 20 zones per page. Cursor returned by above request is used: %s' % c.get_zones_v3(limit=20, cursor='MDAwMC10YW52aS1zaWduZWQuY29tLjpORVhU', q={"zone_status":"ALL"})
-print 'create primary zone result %s' % c.create_primary_zone(account_name, "foo.invalid.")
-print 'get zone metadata %s' % c.get_zone_metadata("foo.invalid.")
-print 'delete zone %s ' % c.delete_zone("foo.invalid.")
-all_zones = c.get_zones_of_account(account_name, offset=0, limit=5, reverse=True)
-print all_zones
-first_zone_name = all_zones[u'zones'][0][u'properties'][u'name']
-print 'zone name %s ' % first_zone_name
-print 'get_rrsets %s ' % c.get_rrsets(first_zone_name)
-print 'create_rrset %s ' % c.create_rrset(first_zone_name, "A", "foo", 300, "1.2.3.4")
-print 'get_rrsets %s ' % c.get_rrsets(first_zone_name)
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'edit_rrset %s ' % c.edit_rrset(first_zone_name, "A", "foo", 100, ["10.20.30.40"])
-print 'get_rrsets %s ' % c.get_rrsets(first_zone_name)
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo")
-print 'delete_rrset %s ' % c.delete_rrset(first_zone_name, "A", "foo")
-print 'get_rrsets %s ' % c.get_rrsets(first_zone_name)
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo")
-print 'batch delete %s ' % c.batch([
-    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
-    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
-])
+test_zone_name='udns-python-rest-client-test.com.'
 
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo2")
-print 'batch create %s ' % c.batch([
-    {'method': 'POST', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2', 'body': {'ttl': 100, 'rdata': ['2.4.6.8']}},
-    {'method': 'POST', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3', 'body': {'ttl': 100, 'rdata': ['20.40.60.80']}},
-])
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo2")
-print 'batch delete %s ' % c.batch([
-    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo2'},
-    {'method': 'DELETE', 'uri': '/v1/zones/' + first_zone_name + '/rrsets/A/foo3'},
-])
-print 'get_rrsets_by_type %s ' % c.get_rrsets_by_type(first_zone_name, "A")
-print 'get_rrsets_by_type_owner %s ' % c.get_rrsets_by_type_owner(first_zone_name, "A", "foo2")
+client = RestApiClient(username, password, 'True' == use_token, 'True' == use_http, domain)
+print('version %s' % client.version())
+print('status %s' % client.status())
+account_details = client.get_account_details()
+account_name = account_details['accounts'][0]['accountName']
+print('account name %s' % account_name)
+print('get zone metadata %s' % client.get_zone_metadata_v3("mjoy-example.com."))
+print('sleeping for 20 mins')
+print('get first 5 primary zones with mjoy: %s' % client.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"name":"mjoy", "zone_type":"PRIMARY"}))
+print('\n')
+print('get first 5 secondary zones: %s' % client.get_zones_v3(limit=5, sort="NAME", reverse=False, q={"zone_type":"SECONDARY"}))
+print('\n')
+print('get all zones with 20 zones per page. First page is returned by default: %s' % client.get_zones_v3(limit=20, q={"zone_status":"ALL"}))
+print('\n')
+print('get next page of zones with 20 zones per page. Cursor returned by above request is used: %s' % client.get_zones_v3(limit=20, cursor='MDAwMC10YW52aS1zaWduZWQuY29tLjpORVhU', q={"zone_status":"ALL"}))
+print('create primary zone result %s' % client.create_primary_zone(account_name, "foo.invalid."))
+print('get zone metadata %s' % client.get_zone_metadata("foo.invalid."))
+print('delete zone %s ' % client.delete_zone("foo.invalid."))
+print('zone name %s ' % test_zone_name)
+print('get_rrsets %s ' % client.get_rrsets(test_zone_name))
+print('create_rrset %s ' % client.create_rrset(test_zone_name, "A", "foo", 300, "1.2.3.4"))
+print('get_rrsets %s ' % client.get_rrsets(test_zone_name))
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('edit_rrset %s ' % client.edit_rrset(test_zone_name, "A", "foo", 100, ["10.20.30.40"]))
+print('get_rrsets %s ' % client.get_rrsets(test_zone_name))
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone_name, "A", "foo"))
+print('delete_rrset %s ' % client.delete_rrset(test_zone_name, "A", "foo"))
+print('get_rrsets %s ' % client.get_rrsets(test_zone_name))
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone_name, "A", "foo"))
+print('batch delete %s ' % client.batch([
+    {'method': 'DELETE', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo2'},
+    {'method': 'DELETE', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo3'},
+]))
+
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone_name, "A", "foo2"))
+print('batch create %s ' % client.batch([
+    {'method': 'POST', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo2', 'body': {'ttl': 100, 'rdata': ['2.4.6.8']}},
+    {'method': 'POST', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo3', 'body': {'ttl': 100, 'rdata': ['20.40.60.80']}},
+]))
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone_name, "A", "foo2"))
+print('batch delete %s ' % client.batch([
+    {'method': 'DELETE', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo2'},
+    {'method': 'DELETE', 'uri': '/v1/zones/' + test_zone_name + '/rrsets/A/foo3'},
+]))
+print('get_rrsets_by_type %s ' % client.get_rrsets_by_type(test_zone_name, "A"))
+print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone_name, "A", "foo2"))
 
 #getting zones with q, sort, offset, limit
-print 'get first 5 primary zones with j: %s' % c.get_zones(offset=0, limit=5, sort="NAME", reverse=False, q={"name":"j", "zone_type":"PRIMARY"})
+print('get first 5 primary zones with j: %s' % client.get_zones(offset=0, limit=5, sort="NAME", reverse=False, q={"name":"j", "zone_type":"PRIMARY"}))
 
 #creating a zone with upload
-result = c.create_primary_zone_by_upload(account_name, 'sample.client.me.', '../zone.txt')
-print 'create zone via upload: %s' % result
+result = client.create_primary_zone_by_upload(account_name, 'sample.client.me.', './zone.txt')
+print('create zone via upload: %s' % result)
 
 # check the task status
 while True:
-    task_status = c.get_task(result['task_id'])
-    print 'task status: %s ' % c.get_task(result['task_id'])
+    task_status = client.get_task(result['task_id'])
+    print('task status: %s ' % client.get_task(result['task_id']))
     if task_status['code'] != 'IN_PROCESS':
         break
     time.sleep(1)
 
 
 #check all task status
-print 'all task status: %s ' % c.get_all_tasks()
+print('all task status: %s ' % client.get_all_tasks())
 
 #delete task status
-print 'delete task status: %s ' % c.clear_task(result['task_id'])
+print('delete task status: %s ' % client.clear_task(result['task_id']))
 
 #export zonefile in bind format
-print('export zone: %s ' % c.export_zone('sample.client.me.'))
+print(('export zone: %s ' % client.export_zone('sample.client.me.')))
 
 #delete the zone
-print 'delete zone: %s ' % c.delete_zone('sample.client.me.')
+print('delete zone: %s ' % client.delete_zone('sample.client.me.'))
