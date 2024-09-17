@@ -16,7 +16,7 @@ username = sys.argv[1]
 password = sys.argv[2]
 use_http = 'False'
 use_token = 'False'
-domain = 'restapi.ultradns.com'
+domain = 'api.ultradns.com'
 
 if len(sys.argv) == 6:
     use_token = sys.argv[3]
