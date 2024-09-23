@@ -39,6 +39,15 @@ client = RestApiClient(args)
 
 ```python
 from ultra_rest_client import RestApiClient
+import os
+
+# Fetch credentials from environment variables
+username = os.getenv('USERNAME')
+password = os.getenv('PASSWORD')
+
+# Check if credentials are available
+if not username or not password:
+    raise ValueError("Username and password must be set in environment variables.")
 
 client = RestApiClient(your_username, your_password)
 
@@ -52,8 +61,17 @@ print(f"Get metadata for zone {domain}: {client.get_zone_metadata(domain)}")
 
 ```python
 from ultra_rest_client import RestApiClient
+import os
 
-client = RestApiClient(your_bearer_token, your_refresh_token, use_token=True)
+# Fetch tokens from environment variables
+access_token = os.getenv('ACCESS_TOKEN')
+refresh_token = os.getenv('REFRESH_TOKEN')
+
+# Check if tokens are available
+if not access_token or not refresh_token:
+    raise ValueError("Access token and refresh token must be set in environment variables.")
+
+client = RestApiClient(access_token, refresh_token, use_token=True)
 
 domain = "udns-python-rest-client-test.com."
 
@@ -65,8 +83,16 @@ print(f"Get metadata for zone {domain}: {client.get_zone_metadata(domain)}")
 
 ```python
 from ultra_rest_client import RestApiClient
+import os
 
-client = RestApiClient(your_bearer_token, use_token=True)
+# Fetch token from environment variables
+access_token = os.getenv('ACCESS_TOKEN')
+
+# Check if token are available
+if not access_token:
+    raise ValueError("Access token must be set in environment variables.")
+
+client = RestApiClient(access_token, use_token=True)
 
 domain = "udns-python-rest-client-test.com."
 
@@ -81,7 +107,7 @@ This example shows a complete working python file which will create a primary zo
 #!/usr/bin/env python3
 
 from ultra_rest_client import RestApiClient
-import sys
+import os
 
 def create_zone(client, domain):
     """Create a zone in UltraDNS. This function will create a zone with the name specified in the domain argument.
@@ -134,9 +160,14 @@ def main():
     """The main function. This is the entry point for the script. It parses the command line arguments and calls the
     create_zone, create_a_record, and create_cname_record functions."""
 
-    username = sys.argv[1]
-    password = sys.argv[2]
+    # Fetch credentials from environment variables
+    username = os.getenv('USERNAME')
+    password = os.getenv('PASSWORD')
     domain = "ultra-rest-client-test.com."
+
+    # Check if credentials are available
+    if not username or not password:
+        raise ValueError("Username and password must be set in environment variables.")
 
     # Create an instance of your client
     client = RestApiClient(username, password)
@@ -155,6 +186,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+To set the environment variables, use the following commands in your terminal:
+
+```python
+export USERNAME='your_username'
+export PASSWORD='your_password'
 ```
 
 ## Functionality

@@ -8,20 +8,26 @@ __author__ = 'UltraDNS'
 from ultra_rest_client import RestApiClient
 import sys
 import time
+import os
 
-if len(sys.argv) != 6 and len(sys.argv) != 3:
-    raise Exception("Expected use: python sample.py username password [use_token use_http host:port]")
+if len(sys.argv) != 4 and len(sys.argv) != 1:
+    raise Exception("Expected use: python sample.py [use_token use_http host:port]")
 
-username = sys.argv[1]
-password = sys.argv[2]
+# Fetch credentials from environment variables
+username = os.getenv('USERNAME')
+password = os.getenv('PASSWORD')
 use_http = 'False'
 use_token = 'False'
 domain = 'api.ultradns.com'
 
-if len(sys.argv) == 6:
-    use_token = sys.argv[3]
-    use_http = sys.argv[4]
-    domain = sys.argv[5]
+# Check if credentials are available
+if not username or not password:
+    raise ValueError("Username and password must be set in environment variables.")
+
+if len(sys.argv) == 4:
+    use_token = sys.argv[1]
+    use_http = sys.argv[2]
+    domain = sys.argv[3]
 
 test_zone_name='udns-python-rest-client-test.com.'
 
