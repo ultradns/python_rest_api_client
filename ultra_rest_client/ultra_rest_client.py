@@ -9,7 +9,7 @@ import json
 import time
 
 class RestApiClient:
-    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.test.ultradns.net"):
+    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com"):
         """Initialize a Rest API Client.
 
         Arguments:
