@@ -49,7 +49,7 @@ password = os.getenv('PASSWORD')
 if not username or not password:
     raise ValueError("Username and password must be set in environment variables.")
 
-client = RestApiClient(your_username, your_password)
+client = RestApiClient(username, password)
 
 domain = "udns-python-rest-client-test.com."
 
@@ -213,4 +213,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Questions
 
 Please contact UltraDNS support if you have any questions or encounter any issues with this code.
-

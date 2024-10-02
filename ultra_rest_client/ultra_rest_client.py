@@ -827,41 +827,6 @@ class RestApiClient:
         self.clear_task(task_id)
         return result
 
-    # Apex Alias
-    def get_apex_alias(self, zone_name):
-        """Retrieves the Apex Alias record for the specified zone.
-
-        Arguments:
-        zone_name -- The name of the zone. The trailing dot is optional.
-
-        Returns:
-        The Apex Alias record information if it exists.
-
-        Raises:
-        Exception if the record is not found or if there are permission issues.
-        """
-        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/rrsets/APEXALIAS/{zone_name}")
-
-    def create_apex_alias(self, zone_name, ttl, points_to):
-        """Creates an Apex Alias record for the specified zone.
-
-        Arguments:
-        zone_name -- The name of the zone. The trailing dot is optional.
-        ttl -- The TTL (Time To Live) value for the record.
-        points_to -- The fully qualified domain name that this Apex Alias points to.
-
-        Returns:
-        The response from the API indicating success or failure.
-
-        Raises:
-        Exception if there are issues creating the record, such as conflicts with existing records.
-        """
-        rrset = {
-            "ttl": ttl,
-            "rdata": [points_to]
-        }
-        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/rrsets/APEXALIAS/{zone_name}", json.dumps(rrset))
-
 def build_params(q, args):
     params = args.copy()
     if q:
