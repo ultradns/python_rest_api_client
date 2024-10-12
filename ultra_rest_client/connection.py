@@ -7,6 +7,7 @@ __author__ = 'UltraDNS'
 
 # store the URL and the access/refresh tokens as state
 import requests
+import time
 from .about import get_client_user_agent
 
 class AuthError(Exception):
@@ -118,6 +119,10 @@ class RestApiConnection:
         if response.status_code == requests.codes.NO_CONTENT:
             return {}
 
+        if response.status_code == requests.codes.TOO_MANY:
+            time.sleep(1)
+            return self._do_call(uri, method, params, body, False)
+
         # some endpoints have no content-type header
         if 'content-type' not in response.headers:
             response.headers['content-type'] = 'none'
@@ -130,14 +135,19 @@ class RestApiConnection:
         if response.headers.get('content-type') == 'application/zip':
             return response.content
 
-        json_body = response.json()
-        # if this is a background task, add the task id (or location) to the body
-        if response.status_code == requests.codes.ACCEPTED:
-            json_body['task_id'] = response.headers.get('x-task-id')
+        json_body = {}
+        try:
+          json_body = response.json()
+
+          # if this is a background task, add the task id (or location) to the body
+          if response.status_code == requests.codes.ACCEPTED:
             if 'x-task-id' in response.headers:
-                json_body['task_id'] = response.headers['x-task-id']
+              json_body.update({"task_id": response.headers['x-task-id']})
             if 'location' in response.headers:
-                json_body['location'] = response.headers['location']
+              json_body.update({"location": response.headers['location']})
+
+        except requests.exceptions.JSONDecodeError:
+          json_body = {}
 
         if isinstance(json_body, dict) and retry and json_body.get('errorCode') == 60001:
             self._refresh()
