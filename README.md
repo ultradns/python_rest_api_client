@@ -49,7 +49,7 @@ password = os.getenv('PASSWORD')
 if not username or not password:
     raise ValueError("Username and password must be set in environment variables.")
 
-client = RestApiClient(your_username, your_password)
+client = RestApiClient(username, password)
 
 domain = "udns-python-rest-client-test.com."
 
