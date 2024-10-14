@@ -5,6 +5,7 @@ on:
       - master
 jobs:
   Code_Analysis_Job:
+    if: ${{ ! github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     environment: test
     steps:

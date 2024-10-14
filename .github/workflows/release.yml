@@ -5,7 +5,6 @@ on:
       - master
 jobs:
   Code_Analysis_Job:
-    if: ${{ ! github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     environment: test
     steps:
@@ -50,6 +49,11 @@ jobs:
       - 
         name: Creating python Package
         run: hatch build
+      -
+        name: create release Tag
+        run: |
+          git tag ${{ env.RELEASE_VERSION }}
+          git push origin ${{ env.RELEASE_VERSION }}
       - 
         name: Publishing python Package
         uses: pypa/gh-action-pypi-publish@v1.10.1
