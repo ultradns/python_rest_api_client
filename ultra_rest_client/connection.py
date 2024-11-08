@@ -135,19 +135,17 @@ class RestApiConnection:
         if response.headers.get('content-type') == 'application/zip':
             return response.content
 
-        json_body = {}
         try:
           json_body = response.json()
-
-          # if this is a background task, add the task id (or location) to the body
-          if response.status_code == requests.codes.ACCEPTED:
-            if 'x-task-id' in response.headers:
-              json_body.update({"task_id": response.headers['x-task-id']})
-            if 'location' in response.headers:
-              json_body.update({"location": response.headers['location']})
-
         except requests.exceptions.JSONDecodeError:
           json_body = {}
+
+        # if this is a background task, add the task id (or location) to the body
+        if response.status_code == requests.codes.ACCEPTED:
+          if 'x-task-id' in response.headers:
+            json_body.update({"task_id": response.headers['x-task-id']})
+          if 'location' in response.headers:
+            json_body.update({"location": response.headers['location']})
 
         if isinstance(json_body, dict) and retry and json_body.get('errorCode') == 60001:
             self._refresh()
