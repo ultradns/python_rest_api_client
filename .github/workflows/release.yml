@@ -41,7 +41,15 @@ jobs:
         uses: actions/setup-python@v5
       - 
         name: Create Release Info
-        run: echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
+        run: |
+          PLAIN_VERSION=$(cat .plugin-version | sed 's/^v//')
+          echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
+          echo "PLAIN_VERSION=$PLAIN_VERSION" >> $GITHUB_ENV
+      - 
+        name: Debug Versions
+        run: |
+          echo "Tag version: ${{ env.RELEASE_VERSION }}"
+          echo "Hatch version: ${{ env.PLAIN_VERSION }}"
       -
         name: Installing Dependencies
         run: |
@@ -49,7 +57,7 @@ jobs:
           pip install hatch
       - 
         name: Versioning the build
-        run: hatch version ${{ env.RELEASE_VERSION }}
+        run: hatch version ${{ env.PLAIN_VERSION }}
       - 
         name: Creating python Package
         run: hatch build
