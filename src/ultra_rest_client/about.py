@@ -1,4 +1,4 @@
-__version__ = "0.0.0"
+__version__ = "2.2.4"
 PREFIX = "udns-python-rest-client-"
 
 def get_client_user_agent():
