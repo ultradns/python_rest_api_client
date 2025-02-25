@@ -17,6 +17,9 @@ jobs:
       -
         name: Install Dependencies
         run: pip install requests
+      -
+        name: Install Package
+        run: pip install -e .
       - 
         name: Running acceptace test
         run: python test.py
