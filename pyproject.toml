@@ -27,7 +27,7 @@ dependencies = [
 Homepage = "https://github.com/ultradns/python_rest_api_client"
 
 [tool.hatch.version]
-path = "src/ultra_rest_client/about.py"
+path = "./src/ultra_rest_client/about.py"
 
 [tool.hatch.build.targets.sdist]
 include = [

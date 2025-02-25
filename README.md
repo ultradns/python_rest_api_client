@@ -100,6 +100,21 @@ domain = "udns-python-rest-client-test.com."
 print(f"Get metadata for zone {domain}: {client.get_zone_metadata(domain)}")
 ```
 
+### Custom Headers
+
+Custom headers can be defined when instantiating the client:
+
+```python
+    from ultra_rest_client import RestApiClient
+    client = RestApiClient('username', 'password', custom_headers={"foo":"bar", "user-agent":"hello"})
+```
+
+Headers can also be modified after instantiation using the `set_custom_headers()` method on the connection:
+
+```python
+client.rest_api_connection.set_custom_headers({"boo":"far","user-agent":"goodbye"})
+```
+
 ### Quick Examples
 This example shows a complete working python file which will create a primary zone in UltraDNS. This example highlights how to get services using client and make requests.
 
@@ -208,7 +223,7 @@ For detailed API reference, please refer to the UltraDNS API documentation.
 Contributions are always welcome! Please open a pull request with your changes, or open an issue if you encounter any problems or have suggestions.
 
 ## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the Apache-2.0 license License. See the [LICENSE](LICENSE) file for more details.
 
 ## Questions
 

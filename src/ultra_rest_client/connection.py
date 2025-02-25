@@ -27,11 +27,26 @@ class RestError(Exception):
 
 
 class RestApiConnection:
-    def __init__(self, use_http=False, host="api.ultradns.com", access_token: str = "", refresh_token: str = ""):
+    # Don't let users set these headers
+    FORBIDDEN_HEADERS = {"Authorization", "Content-Type", "Accept"}
+
+    def __init__(self, use_http=False, host="api.ultradns.com", access_token: str = "", refresh_token: str = "", custom_headers=None):
         self.use_http = use_http
         self.host = host
         self.access_token = access_token
         self.refresh_token = refresh_token
+        self.custom_headers = custom_headers or {}
+
+    def _validate_custom_headers(self, headers):
+        """Ensure no forbidden headers are being set by the user."""
+        for header in headers.keys():
+            if header in self.FORBIDDEN_HEADERS:
+                raise ValueError(f"Custom headers cannot include '{header}'.")
+
+    def set_custom_headers(self, headers):
+        """Update custom headers after instantiation."""
+        self._validate_custom_headers(headers)
+        self.custom_headers.update(headers)
 
     def _get_connection(self):
         if self.host.startswith("https://") or self.host.startswith("http://"):
@@ -77,6 +92,7 @@ class RestApiConnection:
             raise AuthError(response.json())
 
     def _build_headers(self, content_type):
+        """Construct headers by merging default, custom, and per-request headers."""
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.access_token}",
@@ -84,6 +100,9 @@ class RestApiConnection:
         }
         if content_type:
             headers["Content-Type"] = content_type
+
+        headers.update(self.custom_headers)
+
         return headers
 
     def get(self, uri, params=None):
