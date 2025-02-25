@@ -1,27 +1,28 @@
 name: Release_Workflow
+
 on: 
   push:
     branches:
       - master
+
 jobs:
   Code_Analysis_Job:
     runs-on: ubuntu-latest
     environment: test
     steps:
-      - 
-        name: Check out repository code
+      - name: Check out repository code
         uses: actions/checkout@v4
-      - 
-        name: Setup Python environment
+      
+      - name: Setup Python environment
         uses: actions/setup-python@v5
-      -
-        name: Install Dependencies
+      
+      - name: Install Dependencies
         run: pip install requests
-      -
-        name: Install Package
+      
+      - name: Install Package
         run: pip install -e .
-      - 
-        name: Running acceptace test
+      
+      - name: Running acceptance test
         run: python test.py
         env:
           ULTRADNS_UNIT_TEST_USERNAME: ${{ secrets.ULTRADNS_UNIT_TEST_USERNAME }}
@@ -33,41 +34,59 @@ jobs:
     needs: Code_Analysis_Job
     environment: prod
     steps:
-      - 
-        name: Check out repository code
+      - name: Check out repository code
         uses: actions/checkout@v4
-      - 
-        name: Setup Python environment
+      
+      - name: Setup Python environment
         uses: actions/setup-python@v5
-      - 
-        name: Create Release Info
+      
+      - name: Create Release Info
         run: |
           PLAIN_VERSION=$(cat .plugin-version | sed 's/^v//')
           echo "RELEASE_VERSION=$(cat .plugin-version)" >> $GITHUB_ENV
           echo "PLAIN_VERSION=$PLAIN_VERSION" >> $GITHUB_ENV
-      - 
-        name: Debug Versions
+      
+      - name: Debug Versions
         run: |
           echo "Tag version: ${{ env.RELEASE_VERSION }}"
           echo "Hatch version: ${{ env.PLAIN_VERSION }}"
-      -
-        name: Installing Dependencies
+
+      - name: Installing Dependencies
         run: |
           pip install requests
           pip install hatch
-      - 
-        name: Versioning the build
-        run: hatch version ${{ env.PLAIN_VERSION }}
-      - 
-        name: Creating python Package
+      
+      - name: Ensure Correct Version in about.py
+        run: |
+          if grep -q '__version__' src/ultra_rest_client/about.py; then
+            sed -i 's/^__version__ = .*/__version__ = "'"${{ env.PLAIN_VERSION }}"'"/' src/ultra_rest_client/about.py
+          else
+            echo "__version__ = \"${{ env.PLAIN_VERSION }}\"" > src/ultra_rest_client/about.py
+          fi
+          cat src/ultra_rest_client/about.py
+
+      - name: Check Hatch Version and Update if Necessary
+        run: |
+          CURRENT_VERSION=$(hatch version)
+          echo "Current Hatch version: $CURRENT_VERSION"
+          echo "PLAIN_VERSION: ${{ env.PLAIN_VERSION }}"
+
+          if [ "$CURRENT_VERSION" != "${{ env.PLAIN_VERSION }}" ]; then
+            echo "Updating version..."
+            hatch version "${{ env.PLAIN_VERSION }}"
+          else
+            echo "Skipping version update. Already set to ${{ env.PLAIN_VERSION }}"
+          fi
+
+      - name: Creating Python Package
         run: hatch build
-      -
-        name: create release Tag
+
+      - name: Create release tag
         run: |
           git tag ${{ env.RELEASE_VERSION }}
           git push origin ${{ env.RELEASE_VERSION }}
-      - 
-        name: Publishing python Package
+
+      - name: Publishing python Package
         uses: pypa/gh-action-pypi-publish@v1.10.1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
