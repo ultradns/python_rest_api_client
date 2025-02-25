@@ -31,5 +31,8 @@ path = "src/ultra_rest_client/about.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/src/ultra_rest_client",
+    "src/ultra_rest_client",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ultra_rest_client"]
