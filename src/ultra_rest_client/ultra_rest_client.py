@@ -194,6 +194,16 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.post(f"/v1/zones/{zone_name}/convert")
+    
+    # dnssec resign zone
+    def resign_zone(self, zone_name):
+        """Resign a DNSSEC signed zone.
+
+        Arguments:
+        zone_name -- The zone name. The trailing dot is optional.
+
+        """
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/dnssec", {})
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
