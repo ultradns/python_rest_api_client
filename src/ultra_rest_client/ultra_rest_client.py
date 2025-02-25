@@ -9,7 +9,7 @@ import json
 import time
 
 class RestApiClient:
-    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com"):
+    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com", custom_headers=None):
         """Initialize a Rest API Client.
 
         Arguments:
@@ -28,14 +28,24 @@ class RestApiClient:
         if use_token:
             self.access_token = bu
             self.refresh_token = pr
-            self.rest_api_connection = RestApiConnection(use_http, host, bu, pr)
+            self.rest_api_connection = RestApiConnection(
+                use_http, 
+                host, 
+                bu, 
+                pr, 
+                custom_headers
+            )
             if not self.refresh_token:
                 print(
                     "Warning: Passing a Bearer token with no refresh token means the client state will expire after an hour.")
         else:
             if not pr:
                 raise ValueError("Password is required when providing a username.")
-            self.rest_api_connection = RestApiConnection(use_http, host)
+            self.rest_api_connection = RestApiConnection(
+                use_http, 
+                host, 
+                custom_headers=custom_headers
+            )
             self.rest_api_connection.auth(bu, pr)
 
     # Zones
