@@ -9,7 +9,7 @@ import json
 import time
 
 class RestApiClient:
-    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com", custom_headers=None):
+    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com", custom_headers=None, proxy=None, verify_https=True):
         """Initialize a Rest API Client.
 
         Arguments:
@@ -33,7 +33,9 @@ class RestApiClient:
                 host, 
                 bu, 
                 pr, 
-                custom_headers
+                custom_headers=custom_headers,
+                proxy=proxy,
+                verify_https=verify_https
             )
             if not self.refresh_token:
                 print(
@@ -44,7 +46,9 @@ class RestApiClient:
             self.rest_api_connection = RestApiConnection(
                 use_http, 
                 host, 
-                custom_headers=custom_headers
+                custom_headers=custom_headers,
+                proxy=proxy,
+                verify_https=verify_https
             )
             self.rest_api_connection.auth(bu, pr)
 

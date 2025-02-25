@@ -115,6 +115,45 @@ Headers can also be modified after instantiation using the `set_custom_headers()
 client.rest_api_connection.set_custom_headers({"boo":"far","user-agent":"goodbye"})
 ```
 
+### Proxying Requests
+
+In situations where the client needs to send requests from an application behind a proxy, proxy details can be supplied as part of the constructor:
+
+```python
+# Define proxy settings using the format required by the `requests` library
+proxy_dict = {
+    "http": "http://proxy.example.com:8080",
+    "https": "http://proxy.example.com:8080"
+}
+
+# Initialize the client with a proxy
+client = RestApiClient(
+    "username",
+    "password",
+    proxy=proxy_dict
+)
+
+# Make an API request with the proxy enabled
+response = client.create_primary_zone("my_account", "example.com")
+
+# Update the proxy dynamically if needed
+client.rest_api_connection.set_proxy({
+    "http": "http://newproxy.example.com:8080",
+    "https": "http://newproxy.example.com:8080"
+})
+```
+
+If desired, TLS validation may be disabled using the `verify_https` flag.
+
+```python
+client = RestApiClient(
+    "username",
+    "password",
+    proxy=proxy_dict,
+    verify_https=False
+)
+```
+
 ### Quick Examples
 This example shows a complete working python file which will create a primary zone in UltraDNS. This example highlights how to get services using client and make requests.
 
