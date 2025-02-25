@@ -200,6 +200,26 @@ def create_cname_record(client, domain):
     """
     return client.create_rrset(domain, "CNAME", f"www.{domain}", 300, [domain])
 
+def create_rd_pool(client, domain):
+    """Create a pool of A records in UltraDNS. This function will create an RD pool within the specified domain.
+
+    Args:
+    - client (RestApiClient): An instance of the RestApiClient class.
+    - domain (str): The domain name.
+
+    Returns:
+    - dict: The response body.
+    """
+    return client.create_rd_pool(
+        domain, 
+        "pool",
+        300,
+        [
+            "192.0.2.2",
+            "192.0.2.3"
+        ]
+    )
+
 def delete_zone(client, domain):
     """Delete the zone from UltraDNS.
 
