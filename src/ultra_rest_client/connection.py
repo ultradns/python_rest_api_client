@@ -9,6 +9,8 @@ __author__ = 'UltraDNS'
 import requests
 import time
 from .about import get_client_user_agent
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class AuthError(Exception):
     def __init__(self, message):
@@ -30,30 +32,14 @@ class RestApiConnection:
     # Don't let users set these headers
     FORBIDDEN_HEADERS = {"Authorization", "Content-Type", "Accept"}
 
-    def __init__(self, use_http=False, host="api.ultradns.com", access_token: str = "", refresh_token: str = "", custom_headers=None):
+    def __init__(self, use_http=False, host="api.ultradns.com", access_token: str = "", refresh_token: str = "", custom_headers=None, proxy=None, verify_https=True):
         self.use_http = use_http
         self.host = host
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.custom_headers = custom_headers or {}
-
-    def _validate_custom_headers(self, headers):
-        """Ensure no forbidden headers are being set by the user."""
-        for header in headers.keys():
-            if header in self.FORBIDDEN_HEADERS:
-                raise ValueError(f"Custom headers cannot include '{header}'.")
-
-    def set_custom_headers(self, headers):
-        """Update custom headers after instantiation."""
-        self._validate_custom_headers(headers)
-        self.custom_headers.update(headers)
-
-    def _get_connection(self):
-        if self.host.startswith("https://") or self.host.startswith("http://"):
-            return self.host
-        else:
-            protocol = "http://" if self.use_http else "https://"
-            return protocol + self.host
+        self.proxy = proxy
+        self.verify_https = verify_https
 
     # Authentication
     # We need the ability to take in a username and password and get
@@ -69,7 +55,12 @@ class RestApiConnection:
             "username":username,
             "password":password
         }
-        response = requests.post(f"{host}/v1/authorization/token", data=payload)
+        response = requests.post(
+            f"{host}/v1/authorization/token", 
+            data=payload,
+            proxies=self.proxy,
+            verify=self.verify_https
+        )
         if response.status_code == requests.codes.OK:
             json_body = response.json()
             self.access_token = json_body.get('accessToken')
@@ -83,13 +74,26 @@ class RestApiConnection:
             "grant_type":"refresh_token",
             "refresh_token":self.refresh_token
         }
-        response = requests.post(f"{host}/v1/authorization/token", data=payload)
+        response = requests.post(
+            f"{host}/v1/authorization/token", 
+            data=payload,
+            proxies=self.proxy,
+            verify=self.verify_https
+        )
         if response.status_code == requests.codes.OK:
             json_body = response.json()
             self.access_token = json_body.get('accessToken')
             self.refresh_token = json_body.get('refreshToken')
         else:
             raise AuthError(response.json())
+
+    # Private Utility Methods
+
+    def _validate_custom_headers(self, headers):
+        """Ensure no forbidden headers are being set by the user."""
+        for header in headers.keys():
+            if header in self.FORBIDDEN_HEADERS:
+                raise ValueError(f"Custom headers cannot include '{header}'.")
 
     def _build_headers(self, content_type):
         """Construct headers by merging default, custom, and per-request headers."""
@@ -105,25 +109,14 @@ class RestApiConnection:
 
         return headers
 
-    def get(self, uri, params=None):
-        params = params or {}
-        return self._do_call(uri, "GET", params=params)
+    def _get_connection(self):
+        if self.host.startswith("https://") or self.host.startswith("http://"):
+            return self.host
+        else:
+            protocol = "http://" if self.use_http else "https://"
+            return protocol + self.host
 
-    def post_multi_part(self, uri, files):
-        #use empty string for content type so we don't set it
-        return self._do_call(uri, "POST", files=files, content_type=None)
-
-    def post(self, uri, json=None):
-        return self._do_call(uri, "POST", body=json) if json is not None else self._do_call(uri, "POST")
-
-    def put(self, uri, json):
-        return self._do_call(uri, "PUT", body=json)
-
-    def patch(self, uri, json):
-        return self._do_call(uri, "PATCH", body=json)
-
-    def delete(self, uri):
-        return self._do_call(uri, "DELETE")
+    # Main Request Method
 
     def _do_call(self, uri, method, params=None, body=None, retry=True, files=None, content_type="application/json"):
         host = self._get_connection()
@@ -133,7 +126,9 @@ class RestApiConnection:
             params=params,
             data=body,
             headers=self._build_headers(content_type),
-            files=files
+            files=files,
+            proxies=self.proxy,
+            verify=self.verify_https
         )
         if response.status_code == requests.codes.NO_CONTENT:
             return {}
@@ -171,3 +166,36 @@ class RestApiConnection:
             return self._do_call(uri, method, params, body, False)
 
         return json_body
+
+    # Public HTTP Methods
+
+    def get(self, uri, params=None):
+        params = params or {}
+        return self._do_call(uri, "GET", params=params)
+
+    def post_multi_part(self, uri, files):
+        #use empty string for content type so we don't set it
+        return self._do_call(uri, "POST", files=files, content_type=None)
+
+    def post(self, uri, json=None):
+        return self._do_call(uri, "POST", body=json) if json is not None else self._do_call(uri, "POST")
+
+    def put(self, uri, json):
+        return self._do_call(uri, "PUT", body=json)
+
+    def patch(self, uri, json):
+        return self._do_call(uri, "PATCH", body=json)
+
+    def delete(self, uri):
+        return self._do_call(uri, "DELETE")
+    
+    # Public Utility Methods
+    
+    def set_custom_headers(self, headers):
+        """Update custom headers after instantiation."""
+        self._validate_custom_headers(headers)
+        self.custom_headers.update(headers)
+
+    def set_proxy(self, proxy):
+        """Update the proxy configuration."""
+        self.proxy = proxy

@@ -115,6 +115,45 @@ Headers can also be modified after instantiation using the `set_custom_headers()
 client.rest_api_connection.set_custom_headers({"boo":"far","user-agent":"goodbye"})
 ```
 
+### Proxying Requests
+
+In situations where the client needs to send requests from an application behind a proxy, proxy details can be supplied as part of the constructor:
+
+```python
+# Define proxy settings using the format required by the `requests` library
+proxy_dict = {
+    "http": "http://proxy.example.com:8080",
+    "https": "http://proxy.example.com:8080"
+}
+
+# Initialize the client with a proxy
+client = RestApiClient(
+    "username",
+    "password",
+    proxy=proxy_dict
+)
+
+# Make an API request with the proxy enabled
+response = client.create_primary_zone("my_account", "example.com")
+
+# Update the proxy dynamically if needed
+client.rest_api_connection.set_proxy({
+    "http": "http://newproxy.example.com:8080",
+    "https": "http://newproxy.example.com:8080"
+})
+```
+
+If desired, TLS validation may be disabled using the `verify_https` flag.
+
+```python
+client = RestApiClient(
+    "username",
+    "password",
+    proxy=proxy_dict,
+    verify_https=False
+)
+```
+
 ### Quick Examples
 This example shows a complete working python file which will create a primary zone in UltraDNS. This example highlights how to get services using client and make requests.
 
@@ -160,6 +199,26 @@ def create_cname_record(client, domain):
     - dict: The response body.
     """
     return client.create_rrset(domain, "CNAME", f"www.{domain}", 300, [domain])
+
+def create_rd_pool(client, domain):
+    """Create a pool of A records in UltraDNS. This function will create an RD pool within the specified domain.
+
+    Args:
+    - client (RestApiClient): An instance of the RestApiClient class.
+    - domain (str): The domain name.
+
+    Returns:
+    - dict: The response body.
+    """
+    return client.create_rd_pool(
+        domain, 
+        "pool",
+        300,
+        [
+            "192.0.2.2",
+            "192.0.2.3"
+        ]
+    )
 
 def delete_zone(client, domain):
     """Delete the zone from UltraDNS.

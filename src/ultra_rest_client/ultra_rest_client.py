@@ -9,7 +9,7 @@ import json
 import time
 
 class RestApiClient:
-    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com", custom_headers=None):
+    def __init__(self, bu: str, pr: str = None, use_token: bool = False, use_http: bool =False, host: str = "api.ultradns.com", custom_headers=None, proxy=None, verify_https=True):
         """Initialize a Rest API Client.
 
         Arguments:
@@ -33,7 +33,9 @@ class RestApiClient:
                 host, 
                 bu, 
                 pr, 
-                custom_headers
+                custom_headers=custom_headers,
+                proxy=proxy,
+                verify_https=verify_https
             )
             if not self.refresh_token:
                 print(
@@ -44,7 +46,9 @@ class RestApiClient:
             self.rest_api_connection = RestApiConnection(
                 use_http, 
                 host, 
-                custom_headers=custom_headers
+                custom_headers=custom_headers,
+                proxy=proxy,
+                verify_https=verify_https
             )
             self.rest_api_connection.auth(bu, pr)
 
@@ -190,6 +194,16 @@ class RestApiClient:
 
         """
         return self.rest_api_connection.post(f"/v1/zones/{zone_name}/convert")
+    
+    # dnssec resign zone
+    def resign_zone(self, zone_name):
+        """Resign a DNSSEC signed zone.
+
+        Arguments:
+        zone_name -- The zone name. The trailing dot is optional.
+
+        """
+        return self.rest_api_connection.put("/v1/zones/" + zone_name + "/dnssec", {})
 
     # list zones for account
     def get_zones_of_account(self, account_name, q=None, **kwargs):
@@ -584,6 +598,109 @@ class RestApiClient:
             body (only if required) - The body of the request
         """
         return self.rest_api_connection.post("/v1/batch", json.dumps(batch_list))
+
+    # Create an RD Pool
+    # Sample JSON for an RD pool -- see the REST API docs for their descriptions
+    # {
+    #     "ttl": 120,
+    #     "rdata": [
+    #         "4.5.6.7", "199.7.167.22", "1.2.3.4", "5.6.7.8"
+    #     ],
+    #     "profile": {
+    #         "@context": "http://schemas.ultradns.com/RDPool.jsonschema",
+    #         "description": "description",
+    #         "order": "ROUND_ROBIN"
+    #     }
+    # }
+
+    def _build_rd_rrset(self, rdata_info, ttl, owner_name, order, description):
+        """Builds an RD Pool RRSet.
+        
+        :param rdata_info: List of record data for the records in the pool.
+        :param ttl: The TTL value for the RRSet.
+        :param owner_name: The owner name for the RRSet.
+        :param order: The order in which rdata is served. Used for RD pools.
+        :param description: A description for the RD pool. Defaults to owner_name if not provided.
+        :return: A dictionary representing the RRSet.
+        """
+        profile = {
+            "@context": "http://schemas.ultradns.com/RDPool.jsonschema",
+            "order": order,
+            "description": description if description is not None else owner_name
+        }
+        
+        return {"ttl": ttl, "rdata": rdata_info, "profile": profile}
+
+    def create_rd_pool(self, zone_name, owner_name, ttl, rdata_info, order="ROUND_ROBIN", ipv6=False, description=None):
+        """Creates a new RD Pool.
+        
+        :param zone_name: The zone that contains the RRSet. The trailing dot is optional.
+        :param owner_name: The owner name for the RRSet.
+                          If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                          If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        :param ttl: The TTL value for the RRSet.
+        :param rdata_info: List of record data for the records in the pool.
+                           Values are strings representing either IPv4 or IPv6 addresses.
+        :param order: (Optional) The order in which rdata is served. Default is ROUND_ROBIN.
+                      Valid options:
+                        - ROUND_ROBIN
+                        - FIXED
+                        - RANDOM
+        :param ipv6: (Optional) Boolean indicating whether to create an AAAA (True) or A (False) RD pool. Default is False.
+        :param description: (Optional) A description for the RD pool. Defaults to owner_name if not provided.
+        :return: API response from the POST request.
+        """
+        rtype = "AAAA" if ipv6 else "A"
+        rrset = self._build_rd_rrset(rdata_info, ttl, owner_name, order, description)
+        return self.rest_api_connection.post(
+            f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}",
+            json.dumps(rrset)
+        )
+
+    def edit_rd_pool(self, zone_name, owner_name, ttl, rdata_info, order="ROUND_ROBIN", ipv6=False, description=None):
+        """Updates an existing RD Pool in the specified zone.
+        
+        :param zone_name: The zone that contains the RRSet. The trailing dot is optional.
+        :param owner_name: The owner name for the RRSet.
+                          If no trailing dot is supplied, the owner_name is assumed to be relative (foo).
+                          If a trailing dot is supplied, the owner name is assumed to be absolute (foo.zonename.com.)
+        :param ttl: The TTL value for the RRSet.
+        :param rdata_info: List of record data for the records in the pool.
+        :param order: (Optional) The order in which rdata is served. Default is ROUND_ROBIN.
+        :param ipv6: (Optional) Boolean indicating whether to create an AAAA (True) or A (False) RD pool. Default is False.
+        :param description: (Optional) A description for the RD pool. Defaults to owner_name if not provided.
+        :return: API response from the PUT request.
+        """
+        rtype = "AAAA" if ipv6 else "A"
+        rrset = self._build_rd_rrset(rdata_info, ttl, owner_name, order, description)
+        return self.rest_api_connection.put(
+            f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}",
+            json.dumps(rrset)
+        )
+
+    def get_rd_pools(self, zone_name):
+        """Retrieves an RD Pool in the specified zone.
+        
+        :param zone_name: The zone that contains the RRSet.
+        :param owner_name: The owner name for the RRSet.
+        :return: API response from the GET request.
+        """
+        return self.rest_api_connection.get(
+            f"/v1/zones/{zone_name}/rrsets?q=kind:RD_POOLS"
+        )
+
+    def delete_rd_pool(self, zone_name, owner_name, ipv6=False):
+        """Deletes an RD Pool in the specified zone.
+        
+        :param zone_name: The zone that contains the RRSet.
+        :param owner_name: The owner name for the RRSet.
+        :param ipv6: (Optional) Boolean indicating whether to delete an AAAA (True) or A (False) RD pool. Default is False.
+        :return: API response from the DELETE request.
+        """
+        rtype = "AAAA" if ipv6 else "A"
+        return self.rest_api_connection.delete(
+            f"/v1/zones/{zone_name}/rrsets/{rtype}/{owner_name}"
+        )
 
     # Create an SB Pool
     # Sample JSON for an SB pool -- see the REST API docs for their descriptions
