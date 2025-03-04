@@ -1030,7 +1030,6 @@ class RestApiClient:
         if isinstance(zone_names, str):
             zone_names = [zone_names]
         
-        # Construct the payload
         payload = {
             "hostQueryVolume": {
                 "startDate": start_date,
@@ -1042,10 +1041,7 @@ class RestApiClient:
             }
         }
         
-        # Construct the URL with query parameters
         endpoint = f"/v1/reports/dns_resolution/query_volume/host?advance=true&reportType=ADVANCED_NXDOMAINS&limit={limit}"
-        
-        # Send the request
         return self.rest_api_connection.post(endpoint, json.dumps(payload))
 
     def get_report_results(self, report_id):
@@ -1060,39 +1056,55 @@ class RestApiClient:
         Returns:
         A dictionary or list containing the report results if the report is complete, or an error
         message indicating the report is still processing.
-        
-        Example processing response:
-        {
-            "errors": [
-                {
-                    "message": "Report is in process. Please try again later.",
-                    "code": "410005",
-                    "param": "<report URL>",
-                    "traceId": "BA756737632ACCAB"
-                }
-            ],
-            "message": "The information for this request is not available."
-        }
-        
-        Example completed report response (for Advanced NX Domain report):
-        [
-            {
-                "zoneName": "example.me.",
-                "hostName": "test.example.me.",
-                "accountName": "myaccount",
-                "startDate": "2025-02-01",
-                "endDate": "2025-03-03",
-                "rspTotal": 302,
-                "nxdomainCount": 302
-            },
-            ...
-        ]
         """
-        # Construct the URL with the report ID
-        endpoint = f"/v1/requests/{report_id}"
-        
-        # Send the request
-        return self.rest_api_connection.get(endpoint)
+        return self.rest_api_connection.get(f"/v1/requests/{report_id}")
+
+    # Zone Snapshots
+    def create_snapshot(self, zone_name):
+        """Creates a snapshot of a zone.
+
+        This method sends a POST request to create a snapshot of the specified zone,
+        capturing its current state. A zone can only have one snapshot at a time.
+
+        Arguments:
+        zone_name -- The name of the zone to create a snapshot for.
+
+        Returns:
+        A dictionary containing the response from the API, including a task_id
+        that identifies the snapshot creation task.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/snapshot", json.dumps({}))
+
+    def get_snapshot(self, zone_name):
+        """Retrieves the current snapshot for a zone.
+
+        This method sends a GET request to fetch the current snapshot for the specified zone,
+        returning all details of the snapshot in a structured JSON object.
+
+        Arguments:
+        zone_name -- The name of the zone to retrieve the snapshot for.
+
+        Returns:
+        A dictionary containing detailed snapshot information, including the zone name
+        and a list of resource record sets (rrSets) with their properties.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/snapshot")
+
+    def restore_snapshot(self, zone_name):
+        """Restores a zone to its snapshot.
+
+        This method sends a POST request to restore the specified zone to the state
+        captured in its snapshot. This operation should be used with caution as it
+        will revert all changes made since the snapshot was created.
+
+        Arguments:
+        zone_name -- The name of the zone to restore from its snapshot.
+
+        Returns:
+        A dictionary containing the response from the API, including a task_id
+        that identifies the restore operation task.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/restore", json.dumps({}))
 
 def build_params(q, args):
     params = args.copy()
