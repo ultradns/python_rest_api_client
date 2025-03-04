@@ -1005,6 +1005,95 @@ class RestApiClient:
         """
         return self.rest_api_connection.get(f"/v1/zones/{zone_name}/healthchecks/dangling")
 
+    def create_advanced_nxdomain_report(self, start_date, end_date, zone_names, limit=100):
+        """Initiates the creation of an Advanced NX Domain report.
+
+        This method sends a POST request to generate a report that identifies NX domain queries
+        (DNS queries for non-existent domains) for the specified zones within the given date range.
+
+        Arguments:
+        start_date -- Start date of the report in 'yyyy-MM-dd' format. Must not be more than 30 days prior to end_date.
+        end_date -- End date of the report in 'yyyy-MM-dd' format.
+        zone_names -- A single zone name (string) or a list of zone names to include in the report.
+        limit -- Optional. Number of records to return (default: 100, maximum: 100000).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        
+        Example response:
+        {
+            "requestId": "HQV_NXD-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+        }
+        """
+        # Ensure zone_names is a list
+        if isinstance(zone_names, str):
+            zone_names = [zone_names]
+        
+        # Construct the payload
+        payload = {
+            "hostQueryVolume": {
+                "startDate": start_date,
+                "endDate": end_date,
+                "zoneNames": zone_names
+            },
+            "sortFields": {
+                "nxdomainCount": "DESC"
+            }
+        }
+        
+        # Construct the URL with query parameters
+        endpoint = f"/v1/reports/dns_resolution/query_volume/host?advance=true&reportType=ADVANCED_NXDOMAINS&limit={limit}"
+        
+        # Send the request
+        return self.rest_api_connection.post(endpoint, json.dumps(payload))
+
+    def get_report_results(self, report_id):
+        """Retrieves the results of any report using the report ID.
+
+        This method sends a GET request to fetch the results of a previously initiated report.
+        The report may still be processing, in which case the response will indicate this status.
+
+        Arguments:
+        report_id -- The report ID returned from a report creation method (e.g., create_advanced_nxdomain_report).
+
+        Returns:
+        A dictionary or list containing the report results if the report is complete, or an error
+        message indicating the report is still processing.
+        
+        Example processing response:
+        {
+            "errors": [
+                {
+                    "message": "Report is in process. Please try again later.",
+                    "code": "410005",
+                    "param": "<report URL>",
+                    "traceId": "BA756737632ACCAB"
+                }
+            ],
+            "message": "The information for this request is not available."
+        }
+        
+        Example completed report response (for Advanced NX Domain report):
+        [
+            {
+                "zoneName": "example.me.",
+                "hostName": "test.example.me.",
+                "accountName": "myaccount",
+                "startDate": "2025-02-01",
+                "endDate": "2025-03-03",
+                "rspTotal": 302,
+                "nxdomainCount": 302
+            },
+            ...
+        ]
+        """
+        # Construct the URL with the report ID
+        endpoint = f"/v1/requests/{report_id}"
+        
+        # Send the request
+        return self.rest_api_connection.get(endpoint)
+
 def build_params(q, args):
     params = args.copy()
     if q:
