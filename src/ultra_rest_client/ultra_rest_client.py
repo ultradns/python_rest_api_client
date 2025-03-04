@@ -954,6 +954,57 @@ class RestApiClient:
         self.clear_task(task_id)
         return result
 
+    # Health Checks
+    def create_health_check(self, zone_name):
+        """Initiates a health check for a zone.
+
+        Arguments:
+        zone_name -- The name of the zone to perform a health check on.
+
+        Returns:
+        A dictionary containing the location header from the response, which includes
+        the timestamp identifier needed to retrieve the health check results.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/healthchecks", json.dumps({}))
+
+    def get_health_check(self, zone_name, timestamp):
+        """Retrieves the results of a previously initiated health check.
+
+        Arguments:
+        zone_name -- The name of the zone that was checked.
+        timestamp -- The timestamp identifier returned from create_health_check.
+
+        Returns:
+        A dictionary containing detailed health check results, including version,
+        state, and a list of check results with nested validation details.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/healthchecks/{timestamp}")
+
+    def create_dangling_cname_check(self, zone_name):
+        """Initiates a dangling CNAME (DCNAME) check for a zone.
+
+        Arguments:
+        zone_name -- The name of the zone to perform a dangling CNAME check on.
+
+        Returns:
+        A dictionary containing the response from the API. Note that while a location
+        header is returned, it is not used for retrieving results as only one set of
+        DCNAME results is kept per zone.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/healthchecks/dangling", json.dumps({}))
+
+    def get_dangling_cname_check(self, zone_name):
+        """Retrieves the results of a dangling CNAME check.
+
+        Arguments:
+        zone_name -- The name of the zone to retrieve dangling CNAME check results for.
+
+        Returns:
+        A dictionary containing detailed dangling CNAME check results, including version,
+        zone, status, resultInfo, and a list of dangling records.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/healthchecks/dangling")
+
 def build_params(q, args):
     params = args.copy()
     if q:
