@@ -954,6 +954,231 @@ class RestApiClient:
         self.clear_task(task_id)
         return result
 
+    # Health Checks
+    def create_health_check(self, zone_name):
+        """Initiates a health check for a zone.
+
+        Arguments:
+        zone_name -- The name of the zone to perform a health check on.
+
+        Returns:
+        A dictionary containing the location header from the response, which includes
+        the timestamp identifier needed to retrieve the health check results.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/healthchecks", json.dumps({}))
+
+    def get_health_check(self, zone_name, timestamp):
+        """Retrieves the results of a previously initiated health check.
+
+        Arguments:
+        zone_name -- The name of the zone that was checked.
+        timestamp -- The timestamp identifier returned from create_health_check.
+
+        Returns:
+        A dictionary containing detailed health check results, including version,
+        state, and a list of check results with nested validation details.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/healthchecks/{timestamp}")
+
+    def create_dangling_cname_check(self, zone_name):
+        """Initiates a dangling CNAME (DCNAME) check for a zone.
+
+        Arguments:
+        zone_name -- The name of the zone to perform a dangling CNAME check on.
+
+        Returns:
+        A dictionary containing the response from the API. Note that while a location
+        header is returned, it is not used for retrieving results as only one set of
+        DCNAME results is kept per zone.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/healthchecks/dangling", json.dumps({}))
+
+    def get_dangling_cname_check(self, zone_name):
+        """Retrieves the results of a dangling CNAME check.
+
+        Arguments:
+        zone_name -- The name of the zone to retrieve dangling CNAME check results for.
+
+        Returns:
+        A dictionary containing detailed dangling CNAME check results, including version,
+        zone, status, resultInfo, and a list of dangling records.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/healthchecks/dangling")
+
+    def create_advanced_nxdomain_report(self, start_date, end_date, zone_names, limit=100):
+        """Initiates the creation of an Advanced NX Domain report.
+
+        This method sends a POST request to generate a report that identifies NX domain queries
+        (DNS queries for non-existent domains) for the specified zones within the given date range.
+
+        Arguments:
+        start_date -- Start date of the report in 'yyyy-MM-dd' format. Must not be more than 30 days prior to end_date.
+        end_date -- End date of the report in 'yyyy-MM-dd' format.
+        zone_names -- A single zone name (string) or a list of zone names to include in the report.
+        limit -- Optional. Number of records to return (default: 100, maximum: 100000).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        
+        Example response:
+        {
+            "requestId": "HQV_NXD-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+        }
+        """
+        # Ensure zone_names is a list
+        if isinstance(zone_names, str):
+            zone_names = [zone_names]
+        
+        payload = {
+            "hostQueryVolume": {
+                "startDate": start_date,
+                "endDate": end_date,
+                "zoneNames": zone_names
+            },
+            "sortFields": {
+                "nxdomainCount": "DESC"
+            }
+        }
+        
+        endpoint = f"/v1/reports/dns_resolution/query_volume/host?advance=true&reportType=ADVANCED_NXDOMAINS&limit={limit}"
+        return self.rest_api_connection.post(endpoint, json.dumps(payload))
+
+    def get_report_results(self, report_id):
+        """Retrieves the results of any report using the report ID.
+
+        This method sends a GET request to fetch the results of a previously initiated report.
+        The report may still be processing, in which case the response will indicate this status.
+
+        Arguments:
+        report_id -- The report ID returned from a report creation method (e.g., create_advanced_nxdomain_report).
+
+        Returns:
+        A dictionary or list containing the report results if the report is complete, or an error
+        message indicating the report is still processing.
+        """
+        return self.rest_api_connection.get(f"/v1/requests/{report_id}")
+
+    def create_projected_query_volume_report(self, accountName, sortFields=None):
+        """Initiates the creation of a Projected Query Volume Report.
+
+        This method sends a POST request to generate a report that provides projected query volume
+        data for the specified account.
+
+        Arguments:
+        accountName -- The name of the account for which the report is being run.
+        sortFields -- Optional. A dictionary defining sortable columns and their sort directions.
+                      Valid sortable columns include: 'month', 'currentDay', 'rspMtd', 'rspMtd7dAvg',
+                      'rspMtd30dAvg', 'ttlAvg', and 'rspDaily' (each with values 'ASC' or 'DESC').
+                      If not provided, a default sort will be applied (rspMtd: DESC).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        """
+        payload = {
+            "projectedQueryVolume": {
+                "accountName": accountName
+            }
+        }
+        
+        if sortFields:
+            payload["sortFields"] = sortFields
+        else:
+            payload["sortFields"] = {
+                "rspMtd": "DESC"
+            }
+        
+        return self.rest_api_connection.post("/v1/reports/dns_resolution/projected_query_volume", json.dumps(payload))
+
+    def create_zone_query_volume_report(self, startDate, endDate, zoneQueryVolume=None, sortFields=None, offset=0, limit=1000):
+        """Initiates the creation of a Zone Query Volume Report.
+
+        This method sends a POST request to generate a report that aggregates query volumes for multiple zones
+        over a specified period (up to 13 months).
+
+        Arguments:
+        startDate -- Start date of the report in 'YYYY-MM-DD' format.
+        endDate -- End date of the report in 'YYYY-MM-DD' format.
+        zoneQueryVolume -- Optional. A dictionary with additional fields (e.g., 'zoneName', 'accountName', 'ultra2').
+        sortFields -- Optional. A dictionary mapping sortable column names to sort directions ('ASC' or 'DESC').
+                      Valid sortable columns include: 'zoneName', 'startDate', 'endDate', 'rspTotal', etc.
+                      If not provided, default sort criteria will be applied.
+        offset -- Optional. Pagination offset (default: 0).
+        limit -- Optional. Pagination limit (default: 1000).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        """
+        if zoneQueryVolume is None:
+            zoneQueryVolume = {}
+        
+        zoneQueryVolume["startDate"] = startDate
+        zoneQueryVolume["endDate"] = endDate
+        
+        payload = {
+            "zoneQueryVolume": zoneQueryVolume
+        }
+        
+        if sortFields:
+            payload["sortFields"] = sortFields
+        else:
+            payload["sortFields"] = {
+                "zoneName": "ASC",
+                "endDate": "ASC"
+            }
+        
+        endpoint = f"/v1/reports/dns_resolution/query_volume/zone?offset={offset}&limit={limit}"
+        return self.rest_api_connection.post(endpoint, json.dumps(payload))
+
+    # Zone Snapshots
+    def create_snapshot(self, zone_name):
+        """Creates a snapshot of a zone.
+
+        This method sends a POST request to create a snapshot of the specified zone,
+        capturing its current state. A zone can only have one snapshot at a time.
+
+        Arguments:
+        zone_name -- The name of the zone to create a snapshot for.
+
+        Returns:
+        A dictionary containing the response from the API, including a task_id
+        that identifies the snapshot creation task.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/snapshot", json.dumps({}))
+
+    def get_snapshot(self, zone_name):
+        """Retrieves the current snapshot for a zone.
+
+        This method sends a GET request to fetch the current snapshot for the specified zone,
+        returning all details of the snapshot in a structured JSON object.
+
+        Arguments:
+        zone_name -- The name of the zone to retrieve the snapshot for.
+
+        Returns:
+        A dictionary containing detailed snapshot information, including the zone name
+        and a list of resource record sets (rrSets) with their properties.
+        """
+        return self.rest_api_connection.get(f"/v1/zones/{zone_name}/snapshot")
+
+    def restore_snapshot(self, zone_name):
+        """Restores a zone to its snapshot.
+
+        This method sends a POST request to restore the specified zone to the state
+        captured in its snapshot. This operation should be used with caution as it
+        will revert all changes made since the snapshot was created.
+
+        Arguments:
+        zone_name -- The name of the zone to restore from its snapshot.
+
+        Returns:
+        A dictionary containing the response from the API, including a task_id
+        that identifies the restore operation task.
+        """
+        return self.rest_api_connection.post(f"/v1/zones/{zone_name}/restore", json.dumps({}))
+
 def build_params(q, args):
     params = args.copy()
     if q:

@@ -86,7 +86,7 @@ print('get_rrsets_by_type_owner %s ' % client.get_rrsets_by_type_owner(test_zone
 print('get first 5 primary zones with j: %s' % client.get_zones(offset=0, limit=5, sort="NAME", reverse=False, q={"name":"j", "zone_type":"PRIMARY"}))
 
 #creating a zone with upload
-result = client.create_primary_zone_by_upload(account_name, 'sample.client.me.', './zone.txt')
+result = client.create_primary_zone_by_upload(account_name, 'sample.client.me.', '../zone.txt')
 print('create zone via upload: %s' % result)
 
 # check the task status
