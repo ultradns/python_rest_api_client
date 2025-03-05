@@ -28,7 +28,6 @@ response = client.create_snapshot('example.com')
 task_result = TaskHandler(response, client)
 
 # The TaskHandler will poll until the task is complete
-# The result is exactly what the API returns
 print(task_result)
 ```
 
@@ -68,7 +67,6 @@ response = client.create_advanced_nxdomain_report(
 report_result = ReportHandler(response, client, max_retries=30)
 
 # The ReportHandler will poll until the report is complete
-# The result is exactly what the API returns
 print(report_result)
 ```
 
