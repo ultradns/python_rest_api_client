@@ -1059,6 +1059,79 @@ class RestApiClient:
         """
         return self.rest_api_connection.get(f"/v1/requests/{report_id}")
 
+    def create_projected_query_volume_report(self, accountName, sortFields=None):
+        """Initiates the creation of a Projected Query Volume Report.
+
+        This method sends a POST request to generate a report that provides projected query volume
+        data for the specified account.
+
+        Arguments:
+        accountName -- The name of the account for which the report is being run.
+        sortFields -- Optional. A dictionary defining sortable columns and their sort directions.
+                      Valid sortable columns include: 'month', 'currentDay', 'rspMtd', 'rspMtd7dAvg',
+                      'rspMtd30dAvg', 'ttlAvg', and 'rspDaily' (each with values 'ASC' or 'DESC').
+                      If not provided, a default sort will be applied (rspMtd: DESC).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        """
+        payload = {
+            "projectedQueryVolume": {
+                "accountName": accountName
+            }
+        }
+        
+        if sortFields:
+            payload["sortFields"] = sortFields
+        else:
+            payload["sortFields"] = {
+                "rspMtd": "DESC"
+            }
+        
+        return self.rest_api_connection.post("/v1/reports/dns_resolution/projected_query_volume", json.dumps(payload))
+
+    def create_zone_query_volume_report(self, startDate, endDate, zoneQueryVolume=None, sortFields=None, offset=0, limit=1000):
+        """Initiates the creation of a Zone Query Volume Report.
+
+        This method sends a POST request to generate a report that aggregates query volumes for multiple zones
+        over a specified period (up to 13 months).
+
+        Arguments:
+        startDate -- Start date of the report in 'YYYY-MM-DD' format.
+        endDate -- End date of the report in 'YYYY-MM-DD' format.
+        zoneQueryVolume -- Optional. A dictionary with additional fields (e.g., 'zoneName', 'accountName', 'ultra2').
+        sortFields -- Optional. A dictionary mapping sortable column names to sort directions ('ASC' or 'DESC').
+                      Valid sortable columns include: 'zoneName', 'startDate', 'endDate', 'rspTotal', etc.
+                      If not provided, default sort criteria will be applied.
+        offset -- Optional. Pagination offset (default: 0).
+        limit -- Optional. Pagination limit (default: 1000).
+
+        Returns:
+        A dictionary containing the response from the API, including the requestId which can be used
+        with get_report_results() to retrieve the report data once processing is complete.
+        """
+        if zoneQueryVolume is None:
+            zoneQueryVolume = {}
+        
+        zoneQueryVolume["startDate"] = startDate
+        zoneQueryVolume["endDate"] = endDate
+        
+        payload = {
+            "zoneQueryVolume": zoneQueryVolume
+        }
+        
+        if sortFields:
+            payload["sortFields"] = sortFields
+        else:
+            payload["sortFields"] = {
+                "zoneName": "ASC",
+                "endDate": "ASC"
+            }
+        
+        endpoint = f"/v1/reports/dns_resolution/query_volume/zone?offset={offset}&limit={limit}"
+        return self.rest_api_connection.post(endpoint, json.dumps(payload))
+
     # Zone Snapshots
     def create_snapshot(self, zone_name):
         """Creates a snapshot of a zone.
