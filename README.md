@@ -269,6 +269,10 @@ export USERNAME='your_username'
 export PASSWORD='your_password'
 ```
 
+### Background Tasks
+
+Utilities for handling long running tasks that process in the background, such as reports or exports, are available and documented [here](./src/ultra_rest_client/utils/README.md)
+
 ## Functionality
 
 The sample code does not attempt to implement a client for all available UltraDNS REST API functionality.  It provides access to basic functionality. Adding additional functionality should be relatively straightforward, and any contributions from the UltraDNS community would be greatly appreciated. See [sample.py](sample.py) for an example of how to use this library in your own code.
